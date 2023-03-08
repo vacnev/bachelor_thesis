@@ -1,4 +1,5 @@
-#include<vector>
+#include <vector>
+#include <memory>
 
 template< typename state_t, typename action_t >
 struct history
@@ -13,5 +14,15 @@ struct history
     state_t& last() {
         return states.back();
     }
+
+    int depth() {
+        return actions.size()
+    }
 };
 
+template< typename state_t, typename action_t >
+struct node
+{
+    std::unique_ptr<history> his;
+
+};

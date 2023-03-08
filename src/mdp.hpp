@@ -1,4 +1,4 @@
-#include<vector>
+#include <vector>
 
 template < typename action_t, typename state_t >
 struct MDP
