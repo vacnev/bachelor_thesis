@@ -10,6 +10,7 @@ struct MDP
     virtual std::tuple<std::vector<state_t>, std::vector<double>> state_action(state_t, action_t) = 0;
 
     virtual int reward(state_t, action_t) = 0;
+    virtual int max_reward() = 0;
     virtual bool is_fail_state(state_t) = 0;
     virtual ~MDP() = 0;
 };
