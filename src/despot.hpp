@@ -3,6 +3,7 @@
 #include <time.h>
 #include <cassert>
 #include <cmath>
+#include <random>
 
 
 template< typename action_t, typename state_t >
@@ -49,8 +50,10 @@ struct despot
         double u_rwdu; // upper bound on rwdu
         std::vector<std::unique_ptr<node>> children;
         std::vector<std::vector<double>> scenarios;
+        size_t depth;
         
-        node(history h, std::vector<std::vector<double>>&& scenarios) : his(h), scenarios(std::move(scenarios)) {
+        node(history h, std::vector<std::vector<double>>&& scenarios, size_t depth = 0)
+             : his(h), scenarios(std::move(scenarios)), depth(depth) {
             initialize_values();
         }
 
@@ -59,16 +62,41 @@ struct despot
             default_policy();
 
             U_value = mdp.max_reward() / (1 - gamma);
-            l_rwdu = (scenarios.size() / (double) K) * std::pow(gamma, his.depth()) * L_value;
-            u_rwdu = (scenarios.size() / (double) K) * std::pow(gamma, his.depth()) * U_value - lambda;
+            l_rwdu = (scenarios.size() / (double) K) * std::pow(gamma, depth) * L_value;
+            u_rwdu = (scenarios.size() / (double) K) * std::pow(gamma, depth) * U_value - lambda;
 
             if (u_rwdu < l_rwdu)
                 u_rwdu = l_rwdu;
         }
 
         // random playouts, sets L0
-        double default_policy() {
-            // vyresit depth, delka history != hloubka ve stromu
+        void default_policy() {
+            std::mt19937 generator(std::random_device{}());
+            double L = 0;
+            state_t curr = his.last();
+
+            for (size_t i = 0; i < scenarios.size(); i++) {
+                L += default_policy_rec(1, curr, generator, scenarios[i]);
+            }
+            
+            L_value = L / scenarios.size();
+        }
+
+        double default_policy_rec(size_t step, state_t curr, std::mt19937& generator, std::vector<double>& scenario) {
+            std::vector<action_t> actions = mdp.get_actions(curr);
+            std::uniform_int_distribution<std::size_t> distr(0, actions.size() - 1);
+            size_t a = distr(generator);
+            action_t action = actions[a];
+            int rew = mdp.reward(curr, action);
+
+            if (step == D_default)
+                return rew;
+            
+            // state distr
+            auto options = mdp.state_action(curr, action);
+            state_t next = sample_state(std::get<0>(options), std::get<1>(options), scenario[D + step]);
+
+            return rew + gamma * default_policy_rec(step + 1, next, generator, scenario);
         }
     };
 
@@ -80,10 +108,25 @@ struct despot
 
 
 
-    std::vector<std::vector<double>> sample_scenarios();
+    std::vector<std::vector<double>> sample_scenarios() {
+        std::vector<std::vector<double>> scenarios;
+        std::srand( (unsigned) time(NULL) );
+
+        for(size_t i = 0; i < K; i++) {
+            std::vector<double> scenario;
+
+            for (size_t j = 0; j < D + D_default; j++) {
+                scenario.emplace_back((double) std::rand() / RAND_MAX);
+            }
+            
+            scenarios.push_back(std::move(scenario));
+        }
+
+        return scenarios;
+    }
 
     // sample state using a scenario
-    state_t sample_state(std::vector<state_t> states, std::vector<double> dist, double scenario) {
+    state_t sample_state(std::vector<state_t>& states, std::vector<double>& dist, double scenario) {
 
         for( size_t i = 0; i < states.size(); i++) {
             if (scenario <= dist[i])
