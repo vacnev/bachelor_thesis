@@ -152,6 +152,10 @@ struct despot
 
         while (n->depth <= D && excess_uncertainty(n) > 0 && !prune(n)) {
 
+            // leaf node
+            if (n->children.empty()) {
+                // TODO
+            }
         }
     }
 
