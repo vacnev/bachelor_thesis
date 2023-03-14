@@ -16,7 +16,7 @@ struct history
     }
 
     int depth() {
-        return actions.size()
+        return actions.size();
     }
 
     void add(action_t a, state_t s) {

@@ -2,7 +2,7 @@ SRC_D =
 SRC_E =
 SRC_P =
 SRC_R =
-SRC_T = complex.cpp machine.cpp natural.cpp parser.cpp
+SRC_T = despot.cpp
 
 CXX      = g++
 TIDY     = clang-tidy
