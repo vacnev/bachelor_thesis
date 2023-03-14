@@ -46,6 +46,8 @@ struct despot
 
     struct node
     {
+        despot& tree;
+
         history<state_t, action_t> his;
         double L_value; //lower bound on value function = L0
         double U_value; //upper bound U
@@ -57,14 +59,14 @@ struct despot
         double risk; // risk estimate
         node* parent;
         
-        node(history<state_t, action_t> h, std::vector<std::vector<double>>&& scenarios, node* parent = NULL, size_t depth = 0)
-             : his(h), scenarios(std::move(scenarios)), parent(parent), depth(depth) {
+        node(despot& tree, history<state_t, action_t> h, std::vector<std::vector<double>>&& scenarios, node* parent = NULL, size_t depth = 0)
+             : tree(tree), his(h), scenarios(std::move(scenarios)), parent(parent), depth(depth) {
             initialize_values();
         }
 
         // fail state node
-        node(history<state_t, action_t> h, node* parent, size_t depth)
-             : his(h), parent(parent), depth(depth), risk(1), U_value(0), L_value(0), l_rwdu(0), u_rwdu(0) {}
+        node(despot& tree, history<state_t, action_t> h, node* parent, size_t depth)
+             : tree(tree), his(h), parent(parent), depth(depth), risk(1), U_value(0), L_value(0), l_rwdu(0), u_rwdu(0) {}
 
         state_t& state() {
             return his.last();
@@ -74,9 +76,9 @@ struct despot
         void initialize_values() {
             default_policy();
 
-            U_value = mdp.max_reward() / (1 - gamma);
-            l_rwdu = (scenarios.size() / (double) K) * std::pow(gamma, depth) * L_value;
-            u_rwdu = (scenarios.size() / (double) K) * std::pow(gamma, depth) * U_value - lambda;
+            U_value = tree.mdp.max_reward() / (1 - tree.gamma);
+            l_rwdu = (scenarios.size() / (double) tree.K) * std::pow(tree.gamma, depth) * L_value;
+            u_rwdu = (scenarios.size() / (double) tree.K) * std::pow(tree.gamma, depth) * U_value - tree.lambda;
 
             if (u_rwdu < l_rwdu)
                 u_rwdu = l_rwdu;
@@ -105,22 +107,22 @@ struct despot
             if (is_fail_state(curr))
                 return {0, 1};
 
-            if (step == D_default)
+            if (step == tree.D_default)
                 return {0, 0};
 
-            std::vector<action_t> actions = mdp.get_actions(curr);
+            std::vector<action_t> actions = tree.mdp.get_actions(curr);
             std::uniform_int_distribution<std::size_t> distr(0, actions.size() - 1);
             size_t a = distr(generator);
             action_t action = actions[a];
-            int rew = mdp.reward(curr, action);
+            int rew = tree.mdp.reward(curr, action);
             
             // state distr
-            auto [states, d] = mdp.state_action(curr, action);
-            state_t next = sample_state(states, d, scenar[D + step]);
+            auto [states, d] = tree.mdp.state_action(curr, action);
+            state_t next = tree.sample_state(states, d, scenar[tree.D + step]);
 
             auto child = default_policy_rec(step + 1, next, generator, scenar);
 
-            return {rew + gamma * child.first, child.second};
+            return {rew + tree.gamma * child.first, child.second};
         }
 
         double eta() {
@@ -129,7 +131,7 @@ struct despot
 
         void make_default() {
             U_value = L_value;
-            l_rwdu = (scenarios.size() / (double) K) * std::pow(gamma, depth) * L_value;
+            l_rwdu = (scenarios.size() / (double) tree.K) * std::pow(tree.gamma, depth) * L_value;
             u_rwdu = l_rwdu;
         }
     };
@@ -140,7 +142,7 @@ struct despot
     despot(MDP<state_t, action_t> mdp, history<state_t, action_t> h0) : mdp(mdp) {
         
         std::vector<scenario> scenarios = sample_scenarios();
-        n0 = std::make_unique<node>(h0, std::move(scenarios));
+        n0 = std::make_unique<node>(*this, h0, std::move(scenarios));
     }
 
     void build_despot() {
@@ -186,9 +188,9 @@ struct despot
                         std::unique_ptr<node> new_node;
                         
                         if (mdp.is_fail_state(it->first)) {
-                            new_node = {new_h, n, n->depth + 1};
+                            new_node = {*this, new_h, n, n->depth + 1};
                         } else {
-                            new_node = {new_h, std::move(it->second), n, n->depth + 1};
+                            new_node = {*this, new_h, std::move(it->second), n, n->depth + 1};
                         }
 
                         n->children[action].push_back(std::move(new_node));
@@ -215,7 +217,7 @@ struct despot
             // s* -> next node
 
             n = std::max_element(n->children[a_star].begin(), n->children[a_star].end(),
-                [](auto& a, auto&b) {return excess_uncertainty(a.get()) < excess_uncertainty(b.get());});
+                [this](auto& a, auto&b) {return excess_uncertainty(a.get()) < excess_uncertainty(b.get());});
 
             
             if (n->depth > D)
