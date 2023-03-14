@@ -6,6 +6,7 @@
 #include <random>
 #include <algorithm>
 #include <unordered_map>
+#include <numeric>
 
 // if fail state kills us with prob 1, then there is no point in exploring such states
 // if not, despot can be modified to continue exploration (default_policy, explore)
@@ -55,7 +56,7 @@ struct despot
         double l_rwdu; // lower bound on rwdu
         double u_rwdu; // upper bound on rwdu
         std::unordered_map<action_t, std::vector<std::unique_ptr<node>>> children;
-        std::vector<std::vector<double>> scenarios;
+        std::vector<scenario> scenarios;
         size_t depth;
         double risk; // risk estimate
         node* parent;
@@ -64,6 +65,10 @@ struct despot
              : his(h), scenarios(std::move(scenarios)), parent(parent), depth(depth) {
             initialize_values();
         }
+
+        // fail state node
+        node(history h, node* parent, size_t depth)
+             : his(h), parent(parent), depth(depth), risk(1), U_value(0), L_value(0), l_rwdu(0), u_rwdu(0) {}
 
         state_t& state() {
             return his.last();
@@ -114,8 +119,8 @@ struct despot
             int rew = mdp.reward(curr, action);
             
             // state distr
-            auto options = mdp.state_action(curr, action);
-            state_t next = sample_state(std::get<0>(options), std::get<1>(options), scenar[D + step]);
+            auto [states, d] = mdp.state_action(curr, action);
+            state_t next = sample_state(states, d, scenar[D + step]);
 
             auto child = default_policy_rec(step + 1, next, generator, scenar);
 
@@ -135,7 +140,7 @@ struct despot
 
     despot(MDP mdp, history h0) : mdp(mdp) {
         
-        std::vector<std::vector<double>> scenarios = sample_scenarios();
+        std::vector<scenario> scenarios = sample_scenarios();
         n0 = std::make_unique<node>(h0, std::move(scenarios));
     }
 
@@ -174,10 +179,48 @@ struct despot
                         distr[state].push_back(n->scenarios[j]);
                     }
 
-                    // create nodes
+                    for (auto it = distr.begin(); it != distr.end(); it++) {
+
+                        history new_h = n->his;
+                        new_h.add(action, it->first);
+                        
+                        if (mdp.is_fail_state(it->first)) {
+                            auto new_node = std::make_unique<node>(new_h, n, n->depth + 1);
+                        } else {
+                            auto new_node = std::make_unique<node>(new_h, std::move(it->second), n, n->depth + 1);
+                        }
+
+                        n->children[action].push_back(std::move(new_node));
+                    }
                 }
             }
+
+            // a*
+
+            auto comp = [&](auto& a, auto& b) {
+                double coef = (n->scenarios.size() / (double) K) * std::pow(gamma, n->depth);
+
+                double left = std::accumulate(a.second.begin(), a.second.end(), 0, [](auto& c, auto&r) {return c + r->rwdu});
+                left += coef * mdp.reward(n->state, a.first) - lambda;
+
+                double right = std::accumulate(b.second.begin(), b.second.end(), 0, [](auto& c, auto&r) {return c + r->rwdu});
+                right += coef * mdp.reward(n->state, b.first) - lambda;
+
+                return left < right;
+            }
+            action_t a_star = std::max_element(n->children.begin(), n->children.end(), comp)->first;
+
+            // s* -> next node
+
+            n = std::max_element(n->children[a_star].begin(), n->children[a_star].end(),
+                [](auto& a, auto&b) {return excess_uncertainty(a.get()) < excess_uncertainty(b.get())});
+
+            
+            if (n->depth > D)
+                n->make_default();
         }
+
+        return n;
     }
 
     double excess_uncertainty(node* n) {
