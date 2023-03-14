@@ -10,6 +10,7 @@
 // if fail state kills us with prob 1, then there is no point in exploring such states
 // if not, despot can be modified to continue exploration (default_policy, explore)
 
+using scenario = std::vector<double>;
 
 template< typename action_t, typename state_t >
 struct despot
@@ -98,7 +99,7 @@ struct despot
         }
 
         // payoff, risk
-        std::pair<double, double> default_policy_rec(size_t step, state_t curr, std::mt19937& generator, std::vector<double>& scenario) {
+        std::pair<double, double> default_policy_rec(size_t step, state_t curr, std::mt19937& generator, std::vector<double>& scenar) {
             
             if (is_fail_state(curr))
                 return {0, 1};
@@ -114,9 +115,9 @@ struct despot
             
             // state distr
             auto options = mdp.state_action(curr, action);
-            state_t next = sample_state(std::get<0>(options), std::get<1>(options), scenario[D + step]);
+            state_t next = sample_state(std::get<0>(options), std::get<1>(options), scenar[D + step]);
 
-            auto child = default_policy_rec(step + 1, next, generator, scenario);
+            auto child = default_policy_rec(step + 1, next, generator, scenar);
 
             return {rew + gamma * child.first, child.second};
         }
@@ -152,9 +153,29 @@ struct despot
 
         while (n->depth <= D && excess_uncertainty(n) > 0 && !prune(n)) {
 
-            // leaf node
+            // leaf node - expansion
             if (n->children.empty()) {
-                // TODO
+                
+                std::vector<action_t> actions = mdp.get_actions(n->state);
+
+                for (size_t i = 0; i < actions.size(), i++) {
+
+                    // distribute scenarios
+                    std::map<state_t, std::vector<scenario>> distr;
+
+                    action_t action = actions[i];
+                    auto [states, d] = mdp.state_action(n->state, action);
+
+                    for (size_t j = 0; j < n->scenarios.size(); j++) {
+                        double s = n->scenarios[j][n->depth];
+
+                        state_t state = sample_state(states, d, s);
+
+                        distr[state].push_back(n->scenarios[j]);
+                    }
+
+                    // create nodes
+                }
             }
         }
     }
@@ -244,26 +265,26 @@ struct despot
         std::srand( (unsigned) time(NULL) );
 
         for(size_t i = 0; i < K; i++) {
-            std::vector<double> scenario;
+            std::vector<double> scenar;
 
             for (size_t j = 0; j < D + D_default; j++) {
-                scenario.emplace_back((double) std::rand() / RAND_MAX);
+                scenar.emplace_back((double) std::rand() / RAND_MAX);
             }
             
-            scenarios.push_back(std::move(scenario));
+            scenarios.push_back(std::move(scenar));
         }
 
         return scenarios;
     }
 
-    // sample state using a scenario
-    state_t sample_state(std::vector<state_t>& states, std::vector<double>& dist, double scenario) {
+    // sample state using a scenar
+    state_t sample_state(std::vector<state_t>& states, std::vector<double>& dist, double scenar) {
 
         for( size_t i = 0; i < states.size(); i++) {
-            if (scenario <= dist[i])
+            if (scenar <= dist[i])
                 return states[i];
 
-            scenario -= dist[i];
+            scenar -= dist[i];
         }
 
         assert(false);
