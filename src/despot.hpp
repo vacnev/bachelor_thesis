@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <unordered_map>
 #include <numeric>
+#include <chrono>
 
 // if fail state kills us with prob 1, then there is no point in exploring such states
 // if not, despot can be modified to continue exploration (default_policy, explore)
@@ -42,7 +43,7 @@ struct despot
     double gamma = 0.95;
 
     // maximum planning time per step
-    // T_max TODO
+    int T_max = 60;
 
     struct node
     {
@@ -58,15 +59,18 @@ struct despot
         size_t depth;
         double risk; // risk estimate
         node* parent;
+        int payoff; // cumulative payoff
         
-        node(despot& tree, history<state_t, action_t> h, std::vector<std::vector<double>>&& scenarios, node* parent = NULL, size_t depth = 0)
-             : tree(tree), his(h), scenarios(std::move(scenarios)), parent(parent), depth(depth) {
+        node(despot& tree, history<state_t, action_t> h, std::vector<std::vector<double>>&& scenarios,
+             node* parent = NULL, size_t depth = 0, int payoff = 0)
+             : tree(tree), his(h), scenarios(std::move(scenarios)), parent(parent), depth(depth), payoff(payoff) {
             initialize_values();
         }
 
         // fail state node
-        node(despot& tree, history<state_t, action_t> h, node* parent, size_t depth)
-             : tree(tree), his(h), parent(parent), depth(depth), risk(1), U_value(0), L_value(0), l_rwdu(0), u_rwdu(0) {}
+        node(despot& tree, history<state_t, action_t> h, node* parent, size_t depth, int payoff)
+             : tree(tree), his(h), parent(parent), depth(depth), payoff(payoff),
+               risk(1), U_value(0), L_value(0), l_rwdu(0), u_rwdu(0) {}
 
         state_t& state() {
             return his.last();
@@ -134,6 +138,10 @@ struct despot
             l_rwdu = (scenarios.size() / (double) tree.K) * std::pow(tree.gamma, depth) * L_value;
             u_rwdu = l_rwdu;
         }
+
+        bool leaf() {
+            return children.empty();
+        }
     };
 
     // init node
@@ -143,12 +151,17 @@ struct despot
         
         std::vector<scenario> scenarios = sample_scenarios();
         n0 = std::make_unique<node>(*this, h0, std::move(scenarios));
+        build_despot();
     }
 
     void build_despot() {
 
-        // && total running time is less than Tmax
-        while (n0->eta() > eta0) {
+        // start time
+        auto start = std::chrono::steady_clock()::now();
+
+        // until we reach desired gap or time
+        while (n0->eta() > eta0 && 
+               std::chrono::duration<double>(std::chrono::steady_clock()::now() - start) < T_max) {
 
             node* n = explore(n0.get());
             backup(n);
@@ -160,7 +173,7 @@ struct despot
         while (n->depth <= D && excess_uncertainty(n) > 0 && !prune(n)) {
 
             // leaf node - expansion
-            if (n->children.empty()) {
+            if (n->leaf()) {
                 
                 std::vector<action_t> actions = mdp.get_actions(n->state);
 
@@ -171,6 +184,7 @@ struct despot
 
                     action_t action = actions[i];
                     auto [states, d] = mdp.state_action(n->state, action);
+                    int payoff = n->payoff + std::pow(gamma, n->depth) * mdp.reward(n->state, action);
 
                     for (size_t j = 0; j < n->scenarios.size(); j++) {
                         double s = n->scenarios[j][n->depth];
@@ -188,9 +202,9 @@ struct despot
                         std::unique_ptr<node> new_node;
                         
                         if (mdp.is_fail_state(it->first)) {
-                            new_node = {*this, new_h, n, n->depth + 1};
+                            new_node = {*this, new_h, n, n->depth + 1, payoff};
                         } else {
-                            new_node = {*this, new_h, std::move(it->second), n, n->depth + 1};
+                            new_node = {*this, new_h, std::move(it->second), n, n->depth + 1, payoff};
                         }
 
                         n->children[action].push_back(std::move(new_node));
