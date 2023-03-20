@@ -31,7 +31,7 @@ struct despot
     size_t K = 500;
 
     // max depth
-    size_t D = 100;
+    size_t D;
 
     // regularization const
     double lambda = 1;
@@ -121,8 +121,8 @@ struct despot
             int rew = tree.mdp.reward(curr, action);
             
             // state distr
-            auto [states, d] = tree.mdp.state_action(curr, action);
-            state_t next = tree.sample_state(states, d, scenar[tree.D + step]);
+            auto state_distr = tree.mdp.state_action(curr, action);
+            state_t next = tree.sample_state(state_distr, scenar[tree.D + step]);
 
             auto child = default_policy_rec(step + 1, next, generator, scenar);
 
@@ -147,7 +147,7 @@ struct despot
     // init node
     std::unique_ptr<node> n0;
 
-    despot(MDP<state_t, action_t> mdp, history<state_t, action_t> h0) : mdp(mdp) {
+    despot(MDP<state_t, action_t> mdp, size_t depth, history<state_t, action_t> h0) : mdp(mdp), D(depth) {
         
         std::vector<scenario> scenarios = sample_scenarios();
         n0 = std::make_unique<node>(*this, h0, std::move(scenarios));
@@ -183,13 +183,13 @@ struct despot
                     std::unordered_map<state_t, std::vector<scenario>> distr;
 
                     action_t action = actions[i];
-                    auto [states, d] = mdp.state_action(n->state, action);
+                    auto states_distr = mdp.state_action(n->state, action);
                     int payoff = n->payoff + std::pow(gamma, n->depth) * mdp.reward(n->state, action);
 
                     for (size_t j = 0; j < n->scenarios.size(); j++) {
                         double s = n->scenarios[j][n->depth];
 
-                        state_t state = sample_state(states, d, s);
+                        state_t state = sample_state(states_distr, s);
 
                         distr[state].push_back(n->scenarios[j]);
                     }
@@ -339,14 +339,14 @@ struct despot
     }
 
     // sample state using a scenar
-    state_t sample_state(std::vector<state_t>& states, std::vector<double>& dist, double scenar) {
+    state_t sample_state(std::unordered_map<state_t, double>& states_distr, double scenar) {
 
-        for( size_t i = 0; i < states.size(); i++) {
-            if (scenar <= dist[i])
-                return states[i];
+        for (auto it = states_distr.begin(); it != states_distr.end(); ++it) [
+            if (scenar <= it->second)
+                return it->first;
 
-            scenar -= dist[i];
-        }
+            scenar -= it->second;
+        ]
 
         assert(false);
     }
