@@ -89,7 +89,47 @@ struct debra
                        action_t>* node, MPVariable* const var, size_t& ctr,
                        MPConstraint* const risk_cons, MPObjective* const objective) {
         // check leaf - objective, risk
+
+        if (node->leaf()) {
+
+            // objective
+            double coef = node->payoff + std::pow(tree->gamma, node->depth) * node->L_value;
+            objective->SetCoefficient(var, coef);
+
+            // risk
+            risk_cons->SetCoefficient(var, node->risk);
+            return;
+        }
+
+        MPConstraint* const action_sum = solver_policy->MakeRowConstraint(0, 0); // setting 0 0 for equality could cause rounding problems
+        action_sum->SetCoefficient(var, -1); // sum of action prob == prob of parent (2)
+
+        auto actions = mdp.get_actions(node->state());
+        for (auto ac_it = actions.begin(); ac_it != actions.end(); ++ac_it) {
+
+            MPVariable* const ac = solver_policy->MakeVar(0.0, 1.0, std::to_string(ctr++)); // x_h,a
+            action_sum->SetCoefficient(ac, 1);
+
+            auto states_distr = mdp.state_action(node->state(), *ac_it);
+
+            for (auto it = node->children[*ac_it].begin(); it != node->children[*ac_it].end(); ++it) {
+
+                MPVariable* const st = solver_policy->MakeVar(0.0, 1.0, std::to_string(ctr++));
+
+                // st = ac * delta
+                MPConstraint* const ac_st = solver_policy->MakeRowConstraint(0, 0);
+                ac_st->SetCoefficient(st, -1);
+                double delta = states_distr[it->state()];
+                ac_st->SetCoefficient(ac, delta);
+
+                LP_policy_rec(tree, &(*it), st, ctr, risk_cons, objective)
+            }
+        }
     }
 
     void define_LP_risk(despot<state_t, action_t>* tree);
+
+    void LP_risk_rec(despot<state_t, action_t>* tree, despot::node<state_t,
+                       action_t>* node, MPVariable* const var, size_t& ctr,
+                       MPObjective* const objective);
 };
