@@ -101,6 +101,7 @@ struct debra
 
         // TODO
         // write path and payoff into a file (append)
+        // printable state_t
     }
 
     std::unordered_map<action_t, MPVariable*> define_LP_policy(despot<state_t, action_t>* tree, double risk) {
