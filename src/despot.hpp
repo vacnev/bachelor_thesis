@@ -118,11 +118,11 @@ struct despot
             std::uniform_int_distribution<std::size_t> distr(0, actions.size() - 1);
             size_t a = distr(generator);
             action_t action = actions[a];
-            int rew = tree.mdp.reward(curr, action);
             
             // state distr
             auto state_distr = tree.mdp.state_action(curr, action);
             state_t next = tree.sample_state(state_distr, scenar[tree.D + step]);
+            int rew = tree.mdp.reward(curr, action) + tree.mdp.is_treasure(next);
 
             auto child = default_policy_rec(step + 1, next, generator, scenar);
 
@@ -200,11 +200,14 @@ struct despot
                         new_h.add(action, it->first);
 
                         std::unique_ptr<node> new_node;
+
+                        //treasure
+                        int t_pay = payoff + std::pow(gamma, n->depth) * mdp.is_treasure(it->first);
                         
                         if (mdp.is_fail_state(it->first)) {
-                            new_node = {*this, new_h, n, n->depth + 1, payoff};
+                            new_node = {*this, new_h, n, n->depth + 1, t_pay};
                         } else {
-                            new_node = {*this, new_h, std::move(it->second), n, n->depth + 1, payoff};
+                            new_node = {*this, new_h, std::move(it->second), n, n->depth + 1, t_pay};
                         }
 
                         n->children[action].push_back(std::move(new_node));
