@@ -15,6 +15,10 @@ struct history
         return states.back();
     }
 
+    action_t& last_action() {
+        return actions.back();
+    }
+
     int depth() {
         return actions.size();
     }

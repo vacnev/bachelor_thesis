@@ -108,7 +108,7 @@ struct despot
         // payoff, risk
         std::pair<double, double> default_policy_rec(size_t step, state_t curr, std::mt19937& generator, std::vector<double>& scenar) {
             
-            if (is_fail_state(curr))
+            if (tree.mdp.is_fail_state(curr))
                 return {0, 1};
 
             if (step == tree.D_default)

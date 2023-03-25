@@ -139,10 +139,10 @@ struct debra
                 // st = ac * delta (3)
                 MPConstraint* const ac_st = solver_policy->MakeRowConstraint(0, 0);
                 ac_st->SetCoefficient(st, -1);
-                double delta = states_distr[it->state()];
+                double delta = states_distr[*it->state()];
                 ac_st->SetCoefficient(ac, delta);
 
-                LP_policy_rec(tree, &(*it), st, ctr, risk_cons, objective)
+                LP_policy_rec(tree, it->get(), st, ctr, risk_cons, objective)
             }
         }
 
@@ -185,10 +185,10 @@ struct debra
                 // st = ac * delta
                 MPConstraint* const ac_st = solver_policy->MakeRowConstraint(0, 0);
                 ac_st->SetCoefficient(st, -1);
-                double delta = states_distr[it->state()];
+                double delta = states_distr[*it->state()];
                 ac_st->SetCoefficient(ac, delta);
 
-                LP_policy_rec(tree, &(*it), st, ctr, risk_cons, objective)
+                LP_policy_rec(tree, it->get(), st, ctr, risk_cons, objective)
             }
         }
     }
@@ -225,12 +225,12 @@ struct debra
                 // st = ac * delta (3)
                 MPConstraint* const ac_st = solver_risk->MakeRowConstraint(0, 0);
                 ac_st->SetCoefficient(st, -1);
-                double delta = states_distr[it->state()];
+                double delta = states_distr[*it->state()];
                 ac_st->SetCoefficient(ac, delta);
 
-                tau[{*ac_it, it->state()}] = st;
+                tau[{*ac_it, *it->state()}] = st;
 
-                LP_risk_rec(tree, &(*it), st, ctr, objective)
+                LP_risk_rec(tree, it->get(), st, ctr, objective)
             }
         }
 
@@ -269,12 +269,12 @@ struct debra
                 // st = ac * delta (3)
                 MPConstraint* const ac_st = solver_risk->MakeRowConstraint(0, 0);
                 ac_st->SetCoefficient(st, -1);
-                double delta = states_distr[it->state()];
+                double delta = states_distr[*it->state()];
                 ac_st->SetCoefficient(ac, delta);
 
-                tau[{*ac_it, it->state()}] = st;
+                tau[{*ac_it, *it->state()}] = st;
 
-                LP_risk_rec(tree, &(*it), st, ctr, objective)
+                LP_risk_rec(tree, it->get(), st, ctr, objective)
             }
         } 
     }
