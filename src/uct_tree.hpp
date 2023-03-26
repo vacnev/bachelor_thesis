@@ -95,7 +95,7 @@ struct uct_tree
             std::uniform_int_distribution<std::size_t> distr(0, actions.size() - 1);
             size_t a = distr(tree.generator);
             action_t action = actions[a];
-            int rew = tree.mdp.reward(curr, action);
+            int rew = tree.mdp.reward(his, curr, action);
 
             // sample state
             auto state_distr = tree.mdp.state_action(curr, action);
@@ -173,7 +173,7 @@ struct uct_tree
         if (depth < steps && !mdp.is_fail_state(curr->state())) {
 
             for (auto action : mdp.get_actions(curr.state())) {
-                int rew = mdp.reward(curr->state(), action);
+                int rew = mdp.reward(curr->his, curr->state(), action);
                 int payoff = curr->payoff + rew;
 
                 for (auto& state_distr : mdp.state_action(curr->state(), action)) {
@@ -203,7 +203,7 @@ struct uct_tree
             action_t& action = curr->his.last_action();
             parent->N++;
             parent->action_visits[action]++;
-            val = mdp.reward(parent->state(), action) + gamma * val;
+            val = mdp.reward(parent->his, parent->state(), action) + gamma * val;
             parent->action_payoff[action] += (val - parent->action_payoff[action]) / parent->action_visits[action];
 
             curr = parent;

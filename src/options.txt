@@ -1,0 +1,2 @@
+upravy how to pick up treasure:
+- zmenit mdp rew - sbirat treasure at real steps, mozne pridat history jestli jsme jiz poklad sebrali (pomuze v exploration)

@@ -81,7 +81,7 @@ struct ralph
 
             action_t a_star = std::advance(policy.begin(), sample)->first;
 
-            cum_payoff += mdp.reward(tree->root->his.last(), a_star);
+            cum_payoff += mdp.reward(tree->root->his, tree->root->state(), a_star);
 
             // sample state
             auto state_dist = mdp.state_action(tree->root->his.last(), a_star);

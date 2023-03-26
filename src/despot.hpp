@@ -122,7 +122,7 @@ struct despot
             // state distr
             auto state_distr = tree.mdp.state_action(curr, action);
             state_t next = tree.sample_state(state_distr, scenar[tree.D + step]);
-            int rew = tree.mdp.reward(curr, action) + tree.mdp.is_treasure(next);
+            int rew = tree.mdp.reward(his, curr, action);
 
             auto child = default_policy_rec(step + 1, next, generator, scenar);
 
@@ -184,7 +184,7 @@ struct despot
 
                     action_t action = actions[i];
                     auto states_distr = mdp.state_action(n->state, action);
-                    int payoff = n->payoff + std::pow(gamma, n->depth) * mdp.reward(n->state, action);
+                    int payoff = n->payoff + std::pow(gamma, n->depth) * mdp.reward(n->his, n->state, action);
 
                     for (size_t j = 0; j < n->scenarios.size(); j++) {
                         double s = n->scenarios[j][n->depth];
@@ -202,12 +202,12 @@ struct despot
                         std::unique_ptr<node> new_node;
 
                         //treasure
-                        int t_pay = payoff + std::pow(gamma, n->depth) * mdp.is_treasure(it->first);
+                        //int t_pay = payoff + std::pow(gamma, n->depth) * mdp.is_treasure(it->first);
                         
                         if (mdp.is_fail_state(it->first)) {
-                            new_node = {*this, new_h, n, n->depth + 1, t_pay};
+                            new_node = {*this, new_h, n, n->depth + 1, payoff};
                         } else {
-                            new_node = {*this, new_h, std::move(it->second), n, n->depth + 1, t_pay};
+                            new_node = {*this, new_h, std::move(it->second), n, n->depth + 1, payoff};
                         }
 
                         n->children[action].push_back(std::move(new_node));
@@ -221,10 +221,10 @@ struct despot
                 double coef = (n->scenarios.size() / (double) K) * std::pow(gamma, n->depth);
 
                 double left = std::accumulate(a.second.begin(), a.second.end(), 0, [](auto& c, auto&r) {return c + r->rwdu;});
-                left += coef * mdp.reward(n->state, a.first) - lambda;
+                left += coef * mdp.reward(n->his, n->state, a.first) - lambda;
 
                 double right = std::accumulate(b.second.begin(), b.second.end(), 0, [](auto& c, auto&r) {return c + r->rwdu;});
-                right += coef * mdp.reward(n->state, b.first) - lambda;
+                right += coef * mdp.reward(n->his, n->state, b.first)- lambda;
 
                 return left < right;
             };
@@ -304,7 +304,7 @@ struct despot
                     sum_l += child->l_rwdu;
                 }
 
-                int rew = mdp.reward(n->state(), action);
+                int rew = mdp.reward(n->his, n->state(), action);
                 U_argmax.emplace_back(rew + gamma * sum_U);
 
                 double w_rew = (n->scenarios.size() / (double) K) * std::pow(gamma, n->depth) * rew - lambda;

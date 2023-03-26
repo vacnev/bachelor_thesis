@@ -69,7 +69,7 @@ struct debra
 
             action_t a_star = std::advance(policy.begin(), sample)->first;
 
-            cum_payoff += mdp.reward(h.last(), a_star);
+            cum_payoff += mdp.reward(h, h.last(), a_star);
 
             // sample state
             auto state_dist = mdp.state_action(h.last(), a_star);
