@@ -9,7 +9,7 @@
 template< typename state_t, typename action_t >
 struct uct_tree
 {
-    MDP mdp;
+    MDP<state_t, action_t> mdp;
 
     double c = 0.1; //exploration constant
 

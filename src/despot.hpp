@@ -14,12 +14,12 @@
 
 using scenario = std::vector<double>;
 
-template< typename action_t, typename state_t >
+template< typename state_t, typename action_t >
 struct despot
 {
     // TODO: set intial params
 
-    MDP<action_t, state_t> mdp;
+    MDP<state_t, action_t> mdp;
 
     // target gap
     double eta0 = 0.01;

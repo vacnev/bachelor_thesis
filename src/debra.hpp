@@ -4,7 +4,7 @@
 template< typename state_t, typename action_t >
 struct debra
 {
-    MDP mdp;
+    MDP<state_t, action_t> mdp;
 
     // maximum depth
     size_t depth;

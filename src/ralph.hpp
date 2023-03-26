@@ -7,7 +7,7 @@
 template< typename state_t, typename action_t >
 struct ralph
 {
-    MDP mdp;
+    MDP<state_t, action_t> mdp;
 
     // max risk bound
     double risk_delta;
