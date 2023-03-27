@@ -2,7 +2,7 @@ SRC_D =
 SRC_E =
 SRC_P =
 SRC_R =
-SRC_T = despot.cpp
+SRC_T = main_ralph.cpp
 
 CXX      = g++
 TIDY     = clang-tidy

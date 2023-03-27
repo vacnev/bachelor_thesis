@@ -1,5 +1,5 @@
 #include "uct_tree.hpp"
-#include "include/ortools/linear_solver/linear_solver.h"
+#include "ortools/linear_solver/linear_solver.h"
 #include <chrono>
 #include <cassert>
 
@@ -22,7 +22,7 @@ struct ralph
     size_t depth;
 
     // maximum planning time per step
-    int T_max = 60;
+    int T_max = 20;
 
     ralph(MDP mdp, size_t H, double risk) : mdp(mdp), depth(H), risk_delta(risk) {}
 
