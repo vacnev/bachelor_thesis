@@ -1,8 +1,7 @@
 #include "uct_tree.hpp"
-#include "ortools/linear_solver/linear_solver.h"
-#include <chrono>
-#include <cassert>
+#include "include/ortools/linear_solver/linear_solver.h"
 
+using namespace operations_research;
 
 template< typename state_t, typename action_t >
 struct ralph
@@ -163,7 +162,7 @@ struct ralph
                 double delta = states_distr[*it->state()];
                 ac_st->SetCoefficient(ac, delta);
 
-                LP_policy_rec(tree, it->get(), st, ctr, risk_cons, objective, 1)
+                LP_policy_rec(tree, it->get(), st, ctr, risk_cons, objective, 1);
             }
         }
 
@@ -251,13 +250,13 @@ struct ralph
 
                 tau[{*ac_it, *it->state()}] = st;
 
-                LP_risk_rec(tree, it->get(), st, ctr, objective)
+                LP_risk_rec(tree, it->get(), st, ctr, objective);
             }
         }
 
         objective->SetMinimization();
 
-        return std::pair<>(tau, objective);
+        return std::make_pair(tau, objective);
     }
 
     void LP_risk_rec(uct_tree<state_t, action_t>* tree, uct_tree::node<state_t,

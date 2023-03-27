@@ -1,14 +1,6 @@
 #include "mdp.hpp"
-#include "history.hpp"
 #include <time.h>
-#include <cassert>
-#include <cmath>
 #include <random>
-#include <algorithm>
-#include <unordered_map>
-#include <map>
-#include <numeric>
-#include <chrono>
 
 // if fail state kills us with prob 1, then there is no point in exploring such states
 // if not, despot can be modified to continue exploration (default_policy, explore)

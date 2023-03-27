@@ -1,5 +1,5 @@
 #include "despot.hpp"
-#include "ortools/linear_solver/linear_solver.h"
+#include "include/ortools/linear_solver/linear_solver.h"
 
 template< typename state_t, typename action_t >
 struct debra

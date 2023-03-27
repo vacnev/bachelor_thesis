@@ -1,10 +1,4 @@
-#include "history.hpp"
 #include "mdp.hpp"
-#include <unordered_map>
-#include <memory>
-#include <vector>
-#include <cmath>
-
 
 template< typename state_t, typename action_t >
 struct uct_tree

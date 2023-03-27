@@ -1,9 +1,4 @@
 #include "mdp.hpp"
-#include <string>
-#include <iostream>
-#include <fstream>
-#include <cassert>
-#include <algorithm>
 
 enum Direction { LEFT, UP, DOWN, RIGHT };
 
@@ -193,7 +188,7 @@ struct hallway : public MDP<state_t, action_t>
 
 
     // treasure reward for action from treasure state
-    int reward(history<state_t, action_t>& his, state_t& s, action_t& a) override {
+    int reward(history<state_t, action_t>& his, state_t& s) override {
 
         // gold present and not already taken in history
         if (plan[s.first.first][s.first.second] == 'g' &&
