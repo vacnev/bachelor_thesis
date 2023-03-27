@@ -3,6 +3,7 @@
 #include <iostream>
 #include <fstream>
 #include <cassert>
+#include <algorithm>
 
 enum Direction { LEFT, UP, DOWN, RIGHT };
 
@@ -58,7 +59,7 @@ struct hallway : public MDP<state_t, action_t>
         assert(false);
     }
 
-    bool is_fail_state(state_t s) override {
+    bool is_fail_state(state_t& s) override {
         return s == f_state;
     }
 
@@ -66,17 +67,17 @@ struct hallway : public MDP<state_t, action_t>
         return gold_rew;
     }
 
-    std::vector<action_t> get_actions(state_t s) {
+    std::vector<action_t> get_actions(state_t& s) override {
+        if (s == f_state)
+            return {};
+
         return {TURN_RIGHT, TURN_LEFT, FORWARD};
     }
 
     // possible outcome states, probability vector
-    std::unordered_map<state_t, double> state_action(state_t& s, action_t& a) override {
+    std::map<state_t, double> state_action(state_t& s, action_t& a) override {
 
-        std::unordered_map<state_t, double> s_a;
-
-        // left, up, down, right
-        std::array<std::pair<int, int>, 4> dirs = { {{0,-1}, {1,0}, {-1,0}, {0,1}} };
+        std::map<state_t, double> s_a;
 
         switch (a) {
 
@@ -107,21 +108,74 @@ struct hallway : public MDP<state_t, action_t>
                 break;
 
             case FORWARD:
-                double prob = 1;
                 
                 switch (s.second) {
 
                     case UP:
-                        std::pair<int, int> coord = add(s.first, dirs[2]);
-                        if (!is_wall(coord)) {
-                            
-                            //left
-                            std::pair<int, int> coord_shift = add(s.first, dirs[1])
+                        forward_dir(s, s_a, 0, 1, 3);
+                        break;
 
-                            //if wall
-                        }
-                            
+                    case LEFT:
+                        forward_dir(s, s_a, 2, 0, 1);
+                        break;
+                    
+                    case DOWN:
+                        forward_dir(s, s_a, 3, 2, 0);
+                        break;
+
+                    case RIGHT:
+                        forward_dir(s, s_a, 1, 3, 2);
+                        break;
                 }
+        }
+
+        return s_a;
+    }
+
+    // creates state_distr for forward action for one direction
+    // last 3 arguments are keys to dirs (how to move)
+    void forward_dir(state_t& s, std::map<state_t, double>& s_a, int left, int forward, int right) {
+
+        // left, up, down, right
+        std::array<std::pair<int, int>, 4> dirs = { {{0,-1}, {1,0}, {-1,0}, {0,1}} };
+        double prob = 1;
+
+        std::pair<int, int> coord = add(s.first, dirs[forward]);
+        if (!is_wall(coord)) {
+
+            //left
+            std::pair<int, int> coord_shift = add(coord, dirs[left]);
+            if (!is_wall(coord_shift)) {
+                prob -= shift_p;
+
+                if (is_trap(coord_shift)) {
+                    s_a[f_state] += shift_p * trap_p;
+                    s_a[{coord_shift, s.second}] = shift_p * (1 - trap_p);
+                } else {
+                    s_a[{coord_shift, s.second}] = shift_p;
+                }
+            }
+            
+            // right
+            coord_shift = add(coord, dirs[right]);
+            if (!is_wall(coord_shift)) {
+                prob -= shift_p;
+
+                if (is_trap(coord_shift)) {
+                    s_a[f_state] += shift_p * trap_p;
+                    s_a[{coord_shift, s.second}] = shift_p * (1 - trap_p);
+                } else {
+                    s_a[{coord_shift, s.second}] = shift_p;
+                }
+            }
+
+            //forward
+            if (is_trap(coord)) {
+                s_a[f_state] += prob * trap_p;
+                s_a[{coord, s.second}] = prob * (1 - trap_p);
+            } else {
+                s_a[{coord, s.second}] = prob;
+            }
         }
     }
 
@@ -133,8 +187,46 @@ struct hallway : public MDP<state_t, action_t>
         return plan[coord.first][coord.second] == '1';
     }
 
+    bool is_trap(std::pair<int, int>& coord) {
+        return plan[coord.first][coord.second] == 'x';
+    }
+
+
     // treasure reward for action from treasure state
-    int reward(history<state_t, action_t>&, state_t, action_t) = 0;
+    int reward(history<state_t, action_t>& his, state_t& s, action_t& a) override {
+
+        // gold present and not already taken in history
+        if (plan[s.first.first][s.first.second] == 'g' &&
+            ++std::find(his.states.begin(), his.states.end(), s) == his.states.end()) {
+
+            return gold_rew;
+        }
+
+        return move_rew;
+    }
+
+    // at real step
+    void take_gold(state_t& s) override {
+
+        if (plan[s.first.first][s.first.second] == 'g') {
+            plan[s.first.first][s.first.second] = ' ';
+        }
+    }
+
+    // write history for eval
+    void write_history(std::ofstream& file, history<state_t, action_t>& his) {
+        
+        for (size_t i = 0; i < his.actions.size(); ++i) {
+
+            state_t& s = his.states[i];
+            action_t& a = his.actions[i];
+            file << '(' << s.first.first << ", " << s.first.second << ") " << s.second;
+            file << " - " << a << " | ";
+        }
+
+        state_t& s = his.last();
+        file << '(' << s.first.first << ", " << s.first.second << ") " << s.second << '\n';
+    }
 
     ~hallway() = default;
 };

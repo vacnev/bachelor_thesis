@@ -104,6 +104,7 @@ struct ralph
                     break;
                 }
             }
+            mdp.take_gold(tree->root->state());
 
             //altrisk
             double altrisk = 0;
@@ -118,9 +119,10 @@ struct ralph
             delta = (delta - altrisk) / tau[step]->solution_value();
         }
 
-        // TODO
-        // write path and payoff into a file (append)
-        // printable state_t
+        std::ofstream file.open("ralph_result.txt", std::ios::app);
+        file << cum_payoff << ' ';
+        mdp.write_history(file, h);
+        file.close();
     }
 
     std::unordered_map<action_t, MPVariable*> define_LP_policy(uct_tree<state_t, action_t>* tree, double risk) {
@@ -214,7 +216,7 @@ struct ralph
 
     auto define_LP_risk(uct_tree<state_t, action_t>* tree) {
 
-        std::unordered_map<std::pair<action_t, state_t>, MPVariable* const> tau; // risk contribution estimates
+        std::map<std::pair<action_t, state_t>, MPVariable* const> tau; // risk contribution estimates
 
         auto root = tree->root.get();
 

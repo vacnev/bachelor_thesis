@@ -6,6 +6,7 @@
 #include <random>
 #include <algorithm>
 #include <unordered_map>
+#include <map>
 #include <numeric>
 #include <chrono>
 
@@ -180,7 +181,7 @@ struct despot
                 for (size_t i = 0; i < actions.size(); i++) {
 
                     // distribute scenarios
-                    std::unordered_map<state_t, std::vector<scenario>> distr;
+                    std::map<state_t, std::vector<scenario>> distr;
 
                     action_t action = actions[i];
                     auto states_distr = mdp.state_action(n->state, action);
@@ -342,7 +343,7 @@ struct despot
     }
 
     // sample state using a scenar
-    state_t sample_state(std::unordered_map<state_t, double>& states_distr, double scenar) {
+    state_t sample_state(std::map<state_t, double>& states_distr, double scenar) {
 
         for (auto it = states_distr.begin(); it != states_distr.end(); ++it) [
             if (scenar <= it->second)

@@ -24,7 +24,7 @@ struct debra
     // sample episode, write (to file) trajectory (policy observation), cummulative reward
     void episode() {
 
-        history h{mdp.initial_state()};
+        history<state_t, action_t> h{mdp.initial_state()};
 
         int cum_payoff = 0;
 
@@ -85,6 +85,7 @@ struct debra
 
             // step
             h.add(a_star, s_star);
+            mdp.take_gold(s_star);
 
             //altrisk
             double altrisk = 0;
@@ -99,9 +100,10 @@ struct debra
             delta = (delta - altrisk) / tau[step]->solution_value();
         }
 
-        // TODO
-        // write path and payoff into a file (append)
-        // printable state_t
+        std::ofstream file.open("debra_result.txt", std::ios::app);
+        file << cum_payoff << ' ';
+        mdp.write_history(file, h);
+        file.close();
     }
 
     std::unordered_map<action_t, MPVariable*> define_LP_policy(despot<state_t, action_t>* tree, double risk) {
@@ -195,7 +197,7 @@ struct debra
 
     auto define_LP_risk(despot<state_t, action_t>* tree) {
 
-        std::unordered_map<std::pair<action_t, state_t>, MPVariable* const> tau; // risk contribution estimates
+        std::map<std::pair<action_t, state_t>, MPVariable* const> tau; // risk contribution estimates
 
         auto root = tree->n0.get();
 
