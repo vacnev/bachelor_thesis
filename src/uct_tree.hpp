@@ -7,7 +7,7 @@ struct uct_tree
 
     double c = 0.1; //exploration constant
 
-    std::mt19937 generator{std::random_device{}()};
+    std::mt19937 generator = {std::random_device{}()};
 
     // depth of random playouts
     size_t steps_default = 10;
@@ -93,7 +93,7 @@ struct uct_tree
 
             // sample state
             auto state_distr = tree.mdp.state_action(curr, action);
-            std::uniform_real_distribution d();
+            std::uniform_real_distribution d;
             double num = d(tree.generator);
 
             state_t state;
@@ -115,12 +115,12 @@ struct uct_tree
 
     std::unique_ptr<node> root;
 
-    uct_tree(MDP& mdp) : mdp(mdp), root(new node(*this, {mdp.initial_state()}), NULL) {}
+    uct_tree(MDP<state_t, action_t>& mdp) : mdp(mdp), root(new node(*this, {mdp.initial_state()}), NULL) {}
     
     // one mcts iteration
     void simulate(size_t steps) {
 
-        depth = 0;
+        size_t depth = 0;
         node* curr = root.get();
 
         // find leaf
@@ -138,9 +138,9 @@ struct uct_tree
                               [](auto& l, auto& r) { return l.second < r.second; })->first;
 
             // sample state   // duplicate
-            auto state_distr = tree.mdp.state_action(curr->state(), a_star);
-            std::uniform_real_distribution d();
-            double num = d(tree.generator);
+            auto state_distr = mdp.state_action(curr->state(), a_star);
+            std::uniform_real_distribution d;
+            double num = d(generator);
 
             state_t s_star;
             for (auto [s, w] : state_distr) {

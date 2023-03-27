@@ -120,7 +120,7 @@ struct debra
 
         MPConstraint* const risk_cons = solver_policy->MakeRowConstraint(0.0, risk); // risk
 
-        MPVariable* const r = solver_policy->MakeIntVar(1, 1, "r") // (1)
+        MPVariable* const r = solver_policy->MakeIntVar(1, 1, "r"); // (1)
 
         MPConstraint* const action_sum = solver_policy->MakeRowConstraint(0, 0); // setting 0 0 for equality could cause rounding problems
         action_sum->SetCoefficient(r, -1); // sum of action prob == prob of parent (2)
@@ -276,7 +276,7 @@ struct debra
 
                 tau[{*ac_it, *it->state()}] = st;
 
-                LP_risk_rec(tree, it->get(), st, ctr, objective)
+                LP_risk_rec(tree, it->get(), st, ctr, objective);
             }
         } 
     }

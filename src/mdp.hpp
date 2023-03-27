@@ -13,6 +13,7 @@
 #include <cmath>
 #include <chrono>
 #include <numeric>
+#include <random>
 
 template < typename state_t, typename action_t >
 struct MDP

@@ -12,10 +12,10 @@ struct ralph
     double risk_delta;
 
     // Create the linear solvers with the GLOP backend.
-    std::unique_ptr<MPSolver> solver_policy(MPSolver::CreateSolver("GLOP"));
-    std::unique_ptr<MPSolver> solver_risk(MPSolver::CreateSolver("GLOP"));
+    std::unique_ptr<MPSolver> solver_policy{MPSolver::CreateSolver("GLOP")};
+    std::unique_ptr<MPSolver> solver_risk{MPSolver::CreateSolver("GLOP")};
 
-    std::mt19937 generator(std::random_device{}());
+    std::mt19937 generator{std::random_device{}()};
 
     // max depth
     size_t depth;
@@ -23,7 +23,7 @@ struct ralph
     // maximum planning time per step
     int T_max = 20;
 
-    ralph(MDP mdp, size_t H, double risk) : mdp(mdp), depth(H), risk_delta(risk) {}
+    ralph(MDP<state_t, action_t> mdp, size_t H, double risk) : mdp(mdp), depth(H), risk_delta(risk) {}
 
     // sample episode, write (to file) trajectory (policy observation), cummulative reward
     void episode() {
@@ -138,7 +138,7 @@ struct ralph
 
         MPConstraint* const risk_cons = solver_policy->MakeRowConstraint(0.0, risk); // risk
 
-        MPVariable* const r = solver_policy->MakeIntVar(1, 1, "r") // (1)
+        MPVariable* const r = solver_policy->MakeIntVar(1, 1, "r"); // (1)
 
         MPConstraint* const action_sum = solver_policy->MakeRowConstraint(0, 0); // setting 0 0 for equality could cause rounding problems
         action_sum->SetCoefficient(r, -1); // sum of action prob == prob of parent (2)
@@ -172,8 +172,8 @@ struct ralph
         return policy;
     }
 
-    void LP_policy_rec(uct_tree<state_t, action_t>* tree, uct_tree::node<state_t,
-                       action_t>* node, MPVariable* const var, size_t& ctr,
+    void LP_policy_rec(uct_tree<state_t, action_t>* tree, uct_tree<state_t,
+                       action_t>::node* node, MPVariable* const var, size_t& ctr,
                        MPConstraint* const risk_cons, MPObjective* const objective, size_t node_depth) {
 
         if (node->leaf()) {
@@ -259,8 +259,8 @@ struct ralph
         return std::make_pair(tau, objective);
     }
 
-    void LP_risk_rec(uct_tree<state_t, action_t>* tree, uct_tree::node<state_t,
-                       action_t>* node, MPVariable* const var, size_t& ctr,
+    void LP_risk_rec(uct_tree<state_t, action_t>* tree, uct_tree<state_t,
+                       action_t>::node* node, MPVariable* const var, size_t& ctr,
                        MPObjective* const objective) {
         
         if (node->leaf()) {
@@ -292,9 +292,7 @@ struct ralph
                 double delta = states_distr[*it->state()];
                 ac_st->SetCoefficient(ac, delta);
 
-                tau[{*ac_it, *it->state()}] = st;
-
-                LP_risk_rec(tree, it->get(), st, ctr, objective)
+                LP_risk_rec(tree, it->get(), st, ctr, objective);
             }
         } 
     }

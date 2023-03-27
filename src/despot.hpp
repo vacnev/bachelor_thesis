@@ -1,6 +1,5 @@
 #include "mdp.hpp"
 #include <time.h>
-#include <random>
 
 // if fail state kills us with prob 1, then there is no point in exploring such states
 // if not, despot can be modified to continue exploration (default_policy, explore)
