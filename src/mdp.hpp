@@ -35,7 +35,7 @@ struct MDP
     // write history for evaluation
     virtual void write_history(std::ofstream&, history<state_t, action_t>&) = 0;
 
-    virtual ~MDP() = 0;
+    virtual ~MDP() = default;
 };
 
 #endif

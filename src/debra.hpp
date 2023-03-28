@@ -4,7 +4,7 @@
 template< typename state_t, typename action_t >
 struct debra
 {
-    MDP<state_t, action_t> mdp;
+    MDP<state_t, action_t>& mdp;
 
     // maximum depth
     size_t depth;
@@ -100,7 +100,7 @@ struct debra
             delta = (delta - altrisk) / tau[step]->solution_value();
         }
 
-        std::ofstream file.open("debra_result.txt", std::ios::app);
+        std::ofstream file("debra_result.txt", std::ios::app);
         file << cum_payoff << ' ';
         mdp.write_history(file, h);
         file.close();
@@ -128,7 +128,7 @@ struct debra
         auto actions = mdp.get_actions(root->state());
         for (auto ac_it = actions.begin(); ac_it != actions.end(); ++ac_it) {
 
-            MPVariable* const ac = solver_policy->MakeVar(0.0, 1.0, std::to_string(ctr++));
+            MPVariable* const ac = solver_policy->MakeNumVar(0.0, 1.0, std::to_string(ctr++));
             action_sum->SetCoefficient(ac, 1);
             policy[*ac_it] = ac; // add to policy to access solution
 
@@ -136,7 +136,7 @@ struct debra
 
             for (auto it = root->children[*ac_it].begin(); it != root->children[*ac_it].end(); ++it) {
 
-                MPVariable* const st = solver_policy->MakeVar(0.0, 1.0, std::to_string(ctr++));
+                MPVariable* const st = solver_policy->MakeNumVar(0.0, 1.0, std::to_string(ctr++));
 
                 // st = ac * delta (3)
                 MPConstraint* const ac_st = solver_policy->MakeRowConstraint(0, 0);
@@ -154,8 +154,7 @@ struct debra
         return policy;
     }
 
-    void LP_policy_rec(despot<state_t, action_t>* tree, despot::node<state_t,
-                       action_t>* node, MPVariable* const var, size_t& ctr,
+    void LP_policy_rec(despot<state_t, action_t>* tree, despot<state_t, action_t>::node* node, MPVariable* const var, size_t& ctr,
                        MPConstraint* const risk_cons, MPObjective* const objective) {
 
         if (node->leaf()) {
@@ -175,14 +174,14 @@ struct debra
         auto actions = mdp.get_actions(node->state());
         for (auto ac_it = actions.begin(); ac_it != actions.end(); ++ac_it) {
 
-            MPVariable* const ac = solver_policy->MakeVar(0.0, 1.0, std::to_string(ctr++)); // x_h,a
+            MPVariable* const ac = solver_policy->MakeNumVar(0.0, 1.0, std::to_string(ctr++)); // x_h,a
             action_sum->SetCoefficient(ac, 1);
 
             auto states_distr = mdp.state_action(node->state(), *ac_it);
 
             for (auto it = node->children[*ac_it].begin(); it != node->children[*ac_it].end(); ++it) {
 
-                MPVariable* const st = solver_policy->MakeVar(0.0, 1.0, std::to_string(ctr++));
+                MPVariable* const st = solver_policy->MakeNumVar(0.0, 1.0, std::to_string(ctr++));
 
                 // st = ac * delta
                 MPConstraint* const ac_st = solver_policy->MakeRowConstraint(0, 0);
@@ -190,7 +189,7 @@ struct debra
                 double delta = states_distr[*it->state()];
                 ac_st->SetCoefficient(ac, delta);
 
-                LP_policy_rec(tree, it->get(), st, ctr, risk_cons, objective)
+                LP_policy_rec(tree, it->get(), st, ctr, risk_cons, objective);
             }
         }
     }
@@ -207,7 +206,7 @@ struct debra
 
         MPObjective* const objective = solver_risk->MutableObjective();
 
-        MPVariable* const r = solver_risk->MakeIntVar(1, 1, "r") // (1)
+        MPVariable* const r = solver_risk->MakeIntVar(1, 1, "r"); // (1)
 
         MPConstraint* const action_sum = solver_risk->MakeRowConstraint(0, 0); // setting 0 0 for equality could cause rounding problems
         action_sum->SetCoefficient(r, -1); // sum of action prob == prob of parent (2)
@@ -215,14 +214,14 @@ struct debra
         auto actions = mdp.get_actions(root->state());
         for (auto ac_it = actions.begin(); ac_it != actions.end(); ++ac_it) {
 
-            MPVariable* const ac = solver_risk->MakeVar(0.0, 1.0, std::to_string(ctr++));
+            MPVariable* const ac = solver_risk->MakeNumVar(0.0, 1.0, std::to_string(ctr++));
             action_sum->SetCoefficient(ac, 1);
 
             auto states_distr = mdp.state_action(root->state(), *ac_it);
 
             for (auto it = root->children[*ac_it].begin(); it != root->children[*ac_it].end(); ++it) {
 
-                MPVariable* const st = solver_risk->MakeVar(0.0, 1.0, std::to_string(ctr++));
+                MPVariable* const st = solver_risk->MakeNumVar(0.0, 1.0, std::to_string(ctr++));
 
                 // st = ac * delta (3)
                 MPConstraint* const ac_st = solver_risk->MakeRowConstraint(0, 0);
@@ -232,18 +231,18 @@ struct debra
 
                 tau[{*ac_it, *it->state()}] = st;
 
-                LP_risk_rec(tree, it->get(), st, ctr, objective)
+                LP_risk_rec(tree, it->get(), st, ctr, objective);
             }
         }
 
         objective->SetMinimization();
 
-        return std::pair<>(tau, objective);
+        return std::make_pair(tau, objective);
     }
 
-    void LP_risk_rec(despot<state_t, action_t>* tree, despot::node<state_t,
-                       action_t>* node, MPVariable* const var, size_t& ctr,
-                       MPObjective* const objective) {
+    void LP_risk_rec(despot<state_t, action_t>* tree, despot::node<state_t, action_t>* node,
+                     MPVariable* const var, size_t& ctr,
+                     MPObjective* const objective) {
         
         if (node->leaf()) {
 
@@ -259,14 +258,14 @@ struct debra
         auto actions = mdp.get_actions(node->state());
         for (auto ac_it = actions.begin(); ac_it != actions.end(); ++ac_it) {
 
-            MPVariable* const ac = solver_risk->MakeVar(0.0, 1.0, std::to_string(ctr++));
+            MPVariable* const ac = solver_risk->MakeNumVar(0.0, 1.0, std::to_string(ctr++));
             action_sum->SetCoefficient(ac, 1);
 
             auto states_distr = mdp.state_action(node->state(), *ac_it);
 
             for (auto it = node->children[*ac_it].begin(); it != node->children[*ac_it].end(); ++it) {
 
-                MPVariable* const st = solver_risk->MakeVar(0.0, 1.0, std::to_string(ctr++));
+                MPVariable* const st = solver_risk->MakeNumVar(0.0, 1.0, std::to_string(ctr++));
 
                 // st = ac * delta (3)
                 MPConstraint* const ac_st = solver_risk->MakeRowConstraint(0, 0);

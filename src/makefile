@@ -7,7 +7,7 @@ SRC_T = main_ralph.cpp
 CXX      = g++
 TIDY     = clang-tidy
 VALGRIND = valgrind
-CXXFLAGS = -std=c++17 -Wall -Wextra -Werror -g -MD -MP -Iinclude
+CXXFLAGS = -std=c++17 -Wall -Wextra -g -MD -MP -Iinclude
 
 BIN_T    = ${SRC_T:.cpp=}
 BIN_D    = ${SRC_D:.cpp=}

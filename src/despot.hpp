@@ -11,7 +11,7 @@ struct despot
 {
     // TODO: set intial params
 
-    MDP<state_t, action_t> mdp;
+    MDP<state_t, action_t>& mdp;
 
     // target gap
     double eta0 = 0.01;

@@ -3,11 +3,11 @@
 template< typename state_t, typename action_t >
 struct uct_tree
 {
-    MDP<state_t, action_t> mdp;
+    MDP<state_t, action_t>* mdp;
 
     double c = 0.1; //exploration constant
 
-    std::mt19937 generator = {std::random_device{}()};
+    std::mt19937 generator{std::random_device{}()};
 
     // depth of random playouts
     size_t steps_default = 10;
@@ -115,7 +115,7 @@ struct uct_tree
 
     std::unique_ptr<node> root;
 
-    uct_tree(MDP<state_t, action_t>& mdp) : mdp(mdp), root(new node(*this, {mdp.initial_state()}), NULL) {}
+    uct_tree(MDP<state_t, action_t>* mdp) : mdp(mdp), root(new node(*this, {mdp.initial_state()}), NULL) {}
     
     // one mcts iteration
     void simulate(size_t steps) {
@@ -166,7 +166,7 @@ struct uct_tree
 
         if (depth < steps && !mdp.is_fail_state(curr->state())) {
 
-            for (auto action : mdp.get_actions(curr.state())) {
+            for (auto action : mdp.get_actions(curr->state())) {
                 int rew = mdp.reward(curr->his, curr->state(), action);
                 int payoff = curr->payoff + rew;
 
@@ -192,7 +192,7 @@ struct uct_tree
         curr->N++;
         node* parent;
 
-        while (parent = curr->parent) {
+        while ((parent = curr->parent)) {
 
             action_t& action = curr->his.last_action();
             parent->N++;

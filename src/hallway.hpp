@@ -209,7 +209,7 @@ struct hallway : public MDP<state_t, action_t>
     }
 
     // write history for eval
-    void write_history(std::ofstream& file, history<state_t, action_t>& his) {
+    void write_history(std::ofstream& file, history<state_t, action_t>& his) override {
         
         for (size_t i = 0; i < his.actions.size(); ++i) {
 
@@ -223,5 +223,5 @@ struct hallway : public MDP<state_t, action_t>
         file << '(' << s.first.first << ", " << s.first.second << ") " << s.second << '\n';
     }
 
-    ~hallway() = default;
+    ~hallway() override = default;
 };
