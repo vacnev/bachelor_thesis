@@ -29,7 +29,7 @@ struct ralph
         std::unique_ptr<MPSolver> solver_policy(MPSolver::CreateSolver("GLOP"));
         std::unique_ptr<MPSolver> solver_risk(MPSolver::CreateSolver("GLOP"));
 
-        std::unique_ptr<uct_tree<state_t, action_t>> tree(mdp);
+        auto tree = std::make_unique<uct_tree<state_t, action_t>>(mdp);
 
         int cum_payoff = 0;
 
@@ -79,7 +79,7 @@ struct ralph
             std::discrete_distribution<> ad(policy_distr.begin(), policy_distr.end());
             int sample = ad(generator);
 
-            action_t a_star = std::advance(policy.begin(), sample)->first;
+            action_t a_star = std::next(std::begin(policy), sample)->first;
 
             cum_payoff += mdp->reward(tree->root->his, tree->root->state(), a_star);
 
@@ -93,13 +93,13 @@ struct ralph
             std::discrete_distribution<> sd(weights.begin(), weights.end());
             sample = sd(generator);
 
-            state_t s_star = std::advance(state_dist, sample)->first;
+            state_t s_star = std::next(std::begin(state_dist), sample)->first;
 
             // step
             auto& children = tree->root->children[a_star];
             for (auto it = children.begin(); it != children.end(); ++it) {
 
-                if (*it->state() == s_star) {
+                if ((*it)->state() == s_star) {
                     tree->root = std::move(*it);
                     break;
                 }
@@ -119,13 +119,13 @@ struct ralph
             delta = (delta - altrisk) / tau[step]->solution_value();
         }
 
-        std::ofstream file("ralph_result.txt", std::ios::app);
+        std::ofstream file("ralph_result.txt", std::ios::out | std::ios::app);
         file << cum_payoff << ' ';
         mdp->write_history(file, tree->root->his);
         file.close();
     }
 
-    std::unordered_map<action_t, MPVariable*> define_LP_policy(uct_tree<state_t, action_t>* tree,
+    std::unordered_map<action_t, MPVariable* const> define_LP_policy(uct_tree<state_t, action_t>* tree,
                                                      double risk, MPSolver* solver_policy) {
 
         std::unordered_map<action_t, MPVariable* const> policy;
@@ -161,7 +161,7 @@ struct ralph
                 // st = ac * delta (3)
                 MPConstraint* const ac_st = solver_policy->MakeRowConstraint(0, 0);
                 ac_st->SetCoefficient(st, -1);
-                double delta = states_distr[*it->state()];
+                double delta = states_distr[(*it)->state()];
                 ac_st->SetCoefficient(ac, delta);
 
                 LP_policy_rec(tree, it->get(), st, ctr, risk_cons, objective, 1, solver_policy);
@@ -207,7 +207,7 @@ struct ralph
                 // st = ac * delta
                 MPConstraint* const ac_st = solver_policy->MakeRowConstraint(0, 0);
                 ac_st->SetCoefficient(st, -1);
-                double delta = states_distr[*it->state()];
+                double delta = states_distr[(*it)->state()];
                 ac_st->SetCoefficient(ac, delta);
 
                 LP_policy_rec(tree, it->get(), st, ctr, risk_cons, objective, node_depth + 1, solver_policy);
@@ -247,10 +247,12 @@ struct ralph
                 // st = ac * delta (3)
                 MPConstraint* const ac_st = solver_risk->MakeRowConstraint(0, 0);
                 ac_st->SetCoefficient(st, -1);
-                double delta = states_distr[*it->state()];
+                double delta = states_distr[(*it)->state()];
                 ac_st->SetCoefficient(ac, delta);
 
-                tau[{*ac_it, *it->state()}] = st;
+                // tau[std::make_pair(*ac_it, (*it)->state())] = st;
+                //state_t s = (*it)->state();
+                tau.insert({std::make_pair(*ac_it, (*it)->state()), st});
 
                 LP_risk_rec(tree, it->get(), st, ctr, objective, solver_risk);
             }
@@ -291,7 +293,7 @@ struct ralph
                 // st = ac * delta (3)
                 MPConstraint* const ac_st = solver_risk->MakeRowConstraint(0, 0);
                 ac_st->SetCoefficient(st, -1);
-                double delta = states_distr[*it->state()];
+                double delta = states_distr[(*it)->state()];
                 ac_st->SetCoefficient(ac, delta);
 
                 LP_risk_rec(tree, it->get(), st, ctr, objective, solver_risk);

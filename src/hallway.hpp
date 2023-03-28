@@ -188,7 +188,9 @@ struct hallway : public MDP<state_t, action_t>
 
 
     // treasure reward for action from treasure state
-    int reward(history<state_t, action_t>& his, state_t& s) override {
+    int reward(history<state_t, action_t>& his, state_t& s, action_t& a) override {
+
+        action_t& tmp = a;
 
         // gold present and not already taken in history
         if (plan[s.first.first][s.first.second] == 'g' &&

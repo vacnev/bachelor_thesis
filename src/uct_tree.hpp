@@ -78,21 +78,21 @@ struct uct_tree
         // payoff, risk
         std::pair<double, double> default_rec(state_t curr, size_t step) {
 
-            if (tree.mdp.is_fail_state(curr))
+            if (tree.mdp->is_fail_state(curr))
                 return {0, 1};
 
             if (step == tree.steps_default)
                 return {0, 0};
 
             // sample action
-            std::vector<action_t> actions = tree.mdp.get_actions(curr);
+            std::vector<action_t> actions = tree.mdp->get_actions(curr);
             std::uniform_int_distribution<std::size_t> distr(0, actions.size() - 1);
             size_t a = distr(tree.generator);
             action_t action = actions[a];
-            int rew = tree.mdp.reward(his, curr, action);
+            int rew = tree.mdp->reward(his, curr, action);
 
             // sample state
-            auto state_distr = tree.mdp.state_action(curr, action);
+            auto state_distr = tree.mdp->state_action(curr, action);
             std::uniform_real_distribution d;
             double num = d(tree.generator);
 
@@ -115,7 +115,7 @@ struct uct_tree
 
     std::unique_ptr<node> root;
 
-    uct_tree(MDP<state_t, action_t>* mdp) : mdp(mdp), root(new node(*this, {mdp.initial_state()}), NULL) {}
+    uct_tree(MDP<state_t, action_t>* mdp) : mdp(mdp), root(new node(*this, {mdp->initial_state()}), NULL) {}
     
     // one mcts iteration
     void simulate(size_t steps) {
@@ -138,7 +138,7 @@ struct uct_tree
                               [](auto& l, auto& r) { return l.second < r.second; })->first;
 
             // sample state   // duplicate
-            auto state_distr = mdp.state_action(curr->state(), a_star);
+            auto state_distr = mdp->state_action(curr->state(), a_star);
             std::uniform_real_distribution d;
             double num = d(generator);
 
@@ -155,7 +155,7 @@ struct uct_tree
 
             for (auto it = curr->children[a_star].begin(); it != curr->children[a_star].end(); ++it) {
 
-                if (*it->state() == s_star) {
+                if ((*it)->state() == s_star) {
                     curr = it->get();
                     break;
                 }
@@ -164,25 +164,24 @@ struct uct_tree
             ++depth;
         }
 
-        if (depth < steps && !mdp.is_fail_state(curr->state())) {
+        if (depth < steps && !mdp->is_fail_state(curr->state())) {
 
-            for (auto action : mdp.get_actions(curr->state())) {
-                int rew = mdp.reward(curr->his, curr->state(), action);
+            for (auto action : mdp->get_actions(curr->state())) {
+                int rew = mdp->reward(curr->his, curr->state(), action);
                 int payoff = curr->payoff + rew;
 
-                for (auto& state_distr : mdp.state_action(curr->state(), action)) {
-                    for (auto [state, _] : state_distr) {
+                auto state_distr = mdp->state_action(curr->state(), action);
+                for (auto [state, d] : state_distr) {
 
-                        history<state_t, action_t> new_h = curr->his;
-                        new_h.add(action, state);
+                    history<state_t, action_t> new_h = curr->his;
+                    new_h.add(action, state);
 
-                        if (mdp.is_fail_state(state))
-                            curr->children[action].emplace_back(
-                                std::make_unique<node>(*this, std::move(new_h), curr, 1, payoff));
-                        else
-                            curr->children[action].emplace_back(
-                                std::make_unique<node>(*this, std::move(new_h), curr, payoff));
-                    }
+                    if (mdp->is_fail_state(state))
+                        curr->children[action].emplace_back(
+                            std::make_unique<node>(*this, std::move(new_h), curr, 1, payoff));
+                    else
+                        curr->children[action].emplace_back(
+                            std::make_unique<node>(*this, std::move(new_h), curr, payoff));
                 }
             }
         }
@@ -197,7 +196,7 @@ struct uct_tree
             action_t& action = curr->his.last_action();
             parent->N++;
             parent->action_visits[action]++;
-            val = mdp.reward(parent->his, parent->state(), action) + gamma * val;
+            val = mdp->reward(parent->his, parent->state(), action) + gamma * val;
             parent->action_payoff[action] += (val - parent->action_payoff[action]) / parent->action_visits[action];
 
             curr = parent;

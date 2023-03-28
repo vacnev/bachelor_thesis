@@ -14,6 +14,7 @@
 #include <chrono>
 #include <numeric>
 #include <random>
+#include <iterator>
 
 template < typename state_t, typename action_t >
 struct MDP
@@ -25,7 +26,7 @@ struct MDP
     virtual std::map<state_t, double> state_action(state_t&, action_t&) = 0;
 
     // treasure reward for action from treasure state // action ommited since reward doesnt depend on it
-    virtual int reward(history<state_t, action_t>&, state_t&) = 0;
+    virtual int reward(history<state_t, action_t>&, state_t&, action_t&) = 0;
     virtual int max_reward() = 0;
     virtual bool is_fail_state(state_t&) = 0;
 
