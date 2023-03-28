@@ -150,7 +150,7 @@ struct ralph
 
             MPVariable* const ac = solver_policy->MakeNumVar(0.0, 1.0, std::to_string(ctr++));
             action_sum->SetCoefficient(ac, 1);
-            policy[*ac_it] = ac; // add to policy to access solution
+            policy.insert({*ac_it, ac}); // add to policy to access solution
 
             auto states_distr = mdp->state_action(root->state(), *ac_it);
 

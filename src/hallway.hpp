@@ -54,7 +54,7 @@ struct hallway : public MDP<state_t, action_t>
         assert(false);
     }
 
-    bool is_fail_state(state_t& s) override {
+    bool is_fail_state(const state_t& s) override {
         return s == f_state;
     }
 

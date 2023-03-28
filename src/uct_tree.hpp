@@ -39,14 +39,14 @@ struct uct_tree
         // could be changed for pair action, state (better performance of simulate)
 
         node(uct_tree& t, history<state_t, action_t> h, node* p, int payoff = 0)
-             : tree(t), his(h), parent(p), payoff(payoff) {
+             : tree(t), his(h), payoff(payoff), parent(p) {
 
             default_policy(); // sets r, v
         }
 
         // fail state nodes
         node(uct_tree& t, history<state_t, action_t> h, node* p, double risk, int payoff = 0)
-         : tree(t), his(h), parent(p), r(risk), v(0), payoff(payoff) {}
+         : tree(t), his(h), r(risk), v(0), payoff(payoff), parent(p) {}
 
         state_t& state() {
             return his.last();
@@ -115,7 +115,7 @@ struct uct_tree
 
     std::unique_ptr<node> root;
 
-    uct_tree(MDP<state_t, action_t>* mdp) : mdp(mdp), root(new node(*this, {mdp->initial_state()}), NULL) {}
+    uct_tree(MDP<state_t, action_t>* mdp) : mdp(mdp), root(new node(*this, {mdp->initial_state()}, NULL)) {}
     
     // one mcts iteration
     void simulate(size_t steps) {
@@ -128,10 +128,10 @@ struct uct_tree
 
             // pick action according their uct values
             std::unordered_map<action_t, double> uct_act;
+            
+            for (auto it = curr->children.begin(); it != curr->children.end(); ++it) {
 
-            for (auto [action, _] : curr->children) {
-
-                uct_act[action] = curr->uct(action);
+                uct_act[it->first] = curr->uct(it->first);
             }
 
             action_t a_star = std::max_element(uct_act.begin(), uct_act.end(),
@@ -171,12 +171,12 @@ struct uct_tree
                 int payoff = curr->payoff + rew;
 
                 auto state_distr = mdp->state_action(curr->state(), action);
-                for (auto [state, d] : state_distr) {
+                for (auto state_prob : state_distr) {
 
                     history<state_t, action_t> new_h = curr->his;
-                    new_h.add(action, state);
+                    new_h.add(action, state_prob.first);
 
-                    if (mdp->is_fail_state(state))
+                    if (mdp->is_fail_state(state_prob.first))
                         curr->children[action].emplace_back(
                             std::make_unique<node>(*this, std::move(new_h), curr, 1, payoff));
                     else
