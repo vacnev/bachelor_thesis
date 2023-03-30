@@ -68,7 +68,7 @@ endif()
 
 find_package(ortools REQUIRED CONFIG)
 
-add_executable(${PROJECT_NAME} assignment_groups_mip.cc)
+add_executable(${PROJECT_NAME} main_ralph.cpp)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_features(${PROJECT_NAME} PUBLIC
   $<IF:$<CXX_COMPILER_ID:MSVC>,cxx_std_20,cxx_std_17>)

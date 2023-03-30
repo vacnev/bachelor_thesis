@@ -31,9 +31,14 @@ struct hallway : public MDP<state_t, action_t>
 
     hallway(std::string filename) {
         std::string line;
-        std::ifstream file(filename);
+        std::ifstream file(filename, std::ios::in);
 
+        if (!file.is_open())
+            std::cout << "mrdka se neotevrela\n";
+
+        std::cout << "TROLLIN\n";
         while( std::getline(file, line) ) {
+            std::cout << line << std::endl;
             plan.push_back(std::move(line));
         }
 

@@ -115,7 +115,10 @@ struct uct_tree
 
     std::unique_ptr<node> root;
 
-    uct_tree(MDP<state_t, action_t>* mdp) : mdp(mdp), root(new node(*this, {mdp->initial_state()}, NULL)) {}
+    uct_tree(MDP<state_t, action_t>* mdp) : mdp(mdp) {
+
+        root = std::make_unique<node>(*this, history<state_t, action_t>(mdp->initial_state()), nullptr);
+    }
     
     // one mcts iteration
     void simulate(size_t steps) {

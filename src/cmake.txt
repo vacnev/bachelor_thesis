@@ -1,0 +1,2 @@
+cmake -S . -B build -DCMAKE_PREFIX_PATH="../../or-tools_amd64_ubuntu-22.04_cpp_v9.6.2534/or-tools_x86_64_Ubuntu-22.04_cpp_v9.6.2534"
+cmake --build build -v
