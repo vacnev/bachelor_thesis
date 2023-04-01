@@ -17,7 +17,7 @@ struct ralph
     size_t depth;
 
     // maximum planning time per step
-    double T_max = 3;
+    double T_max = 10;
 
     ralph(MDP<state_t, action_t>* mdp, size_t H, double risk)
          : mdp(mdp), risk_delta(risk), depth(H) {}
@@ -122,13 +122,14 @@ struct ralph
             for (auto& [action_state, var] : tau) {
 
                 if (action_state != step)
-                    std::cout << "altrisk sol: " << var->solution_value() << " in state " << action_state.second.first.first << " " << action_state.second.first.second << '\n';
+                    //std::cout << "altrisk sol: " << var->solution_value() << " in state " << action_state.second.first.first << " " << action_state.second.first.second << '\n';
                     altrisk += var->solution_value();
             }
 
             // adjust risk delta
             std::cout << "altrisk step sol: " << tau[step]->solution_value() << " sum altrisk: " << altrisk << '\n';
-            delta = (delta - altrisk) / tau[step]->solution_value();
+            if (delta > altrisk)
+                delta = (delta - altrisk) / tau[step]->solution_value();
 
             std::cout << "root: (" << tree->root->state().first.first << ", " << tree->root->state().first.second << ") " << tree->root->state().second << '\n';
             std::cout << "real step: action: " << a_star << " state: (" << s_star.first.first << ", " << s_star.first.second << ") " << s_star.second << '\n';
@@ -290,7 +291,7 @@ struct ralph
             // objective
             objective->SetCoefficient(var, node->r);
 
-            std::cout << "leaf risk: " << node->r << '\n';
+            //std::cout << "leaf risk: " << node->r << '\n';
 
             return;
         }                   

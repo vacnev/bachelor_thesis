@@ -207,7 +207,7 @@ struct uct_tree
                     new_h.add(action, state_prob.first);
 
                     if (mdp->is_fail_state(state_prob.first)) {
-                        std::cout << "expand failt state\n";
+                        //std::cout << "expand failt state\n";
                         curr->children[action].emplace_back(
                             std::make_unique<node>(*this, std::move(new_h), curr, 1, payoff));
                     } else

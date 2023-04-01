@@ -93,9 +93,9 @@ struct hallway : public MDP<state_t, action_t>
 
         std::map<state_t, double> s_a;
 
-        //std::cout << "state_action:";
-        //std::cout << '(' << s.first.first << ", " << s.first.second << ") " << s.second;
-        //std::cout << " - " << a << "\n";
+        /*std::cout << "state_action:";
+        std::cout << '(' << s.first.first << ", " << s.first.second << ") " << s.second;
+        std::cout << " - " << a << "\n";*/
 
         switch (a) {
 
@@ -155,7 +155,7 @@ struct hallway : public MDP<state_t, action_t>
     void forward_dir(state_t& s, std::map<state_t, double>& s_a, int left, int forward, int right) {
 
         // left, up, down, right
-        std::array<std::pair<int, int>, 4> dirs = { {{0,-1}, {1,0}, {-1,0}, {0,1}} };
+        std::array<std::pair<int, int>, 4> dirs = { {{0,-1}, {-1,0}, {1,0}, {0,1}} };
         double prob = 1;
 
         std::pair<int, int> coord = add(s.first, dirs[forward]);
@@ -167,7 +167,7 @@ struct hallway : public MDP<state_t, action_t>
                 prob -= shift_p;
 
                 if (is_trap(coord_shift)) {
-                    std::cout << "TRAP\n";
+                    //std::cout << "TRAP\n";
                     s_a[f_state] += shift_p * trap_p;
                     s_a.insert({std::make_pair(coord_shift, s.second), shift_p * (1 - trap_p)});
                 } else {
@@ -181,7 +181,7 @@ struct hallway : public MDP<state_t, action_t>
                 prob -= shift_p;
 
                 if (is_trap(coord_shift)) {
-                    std::cout << "TRAP\n";
+                    //std::cout << "TRAP\n";
                     s_a[f_state] += shift_p * trap_p;
                     s_a.insert({std::make_pair(coord_shift, s.second), shift_p * (1 - trap_p)});
                 } else {
@@ -191,7 +191,7 @@ struct hallway : public MDP<state_t, action_t>
 
             //forward
             if (is_trap(coord)) {
-                std::cout << "TRAP\n";
+                //std::cout << "TRAP\n";
                 s_a[f_state] += prob * trap_p;
                 s_a.insert({std::make_pair(coord, s.second), prob * (1 - trap_p)});
             } else {
