@@ -17,7 +17,7 @@ struct ralph
     size_t depth;
 
     // maximum planning time per step
-    double T_max = 20;
+    double T_max = 3;
 
     ralph(MDP<state_t, action_t>* mdp, size_t H, double risk)
          : mdp(mdp), risk_delta(risk), depth(H) {}
@@ -46,6 +46,11 @@ struct ralph
                 tree->simulate(depth - i);
             }
 
+            std::cout << "end simulation\n";
+
+            //std::unique_ptr<MPSolver> solver_policy(MPSolver::CreateSolver("GLOP"));
+            //std::unique_ptr<MPSolver> solver_risk(MPSolver::CreateSolver("GLOP"));
+
             solver_policy->Clear();
             solver_risk->Clear();
 
@@ -54,14 +59,19 @@ struct ralph
             MPSolver::ResultStatus result_status = solver_risk->Solve();
 
             assert(result_status == MPSolver::OPTIMAL);
+
+            std::cout << "risk_solved\n" ; 
             
             // policy
             std::unordered_map<action_t, MPVariable* const> policy = define_LP_policy(tree.get(), delta, solver_policy.get());
             result_status = solver_policy->Solve();
 
-            if (result_status != MPSolver::OPTIMAL) {
+            std::cout << "policy solved\n";
+
+            if (result_status == MPSolver::INFEASIBLE) {
 
                 // if risk_delta is infeasable we relax the bound
+                std::cout << "alter risk\n";
                 delta = risk_accept->Value();
                 auto policy = define_LP_policy(tree.get(), delta, solver_policy.get());
                 const MPSolver::ResultStatus result_status = solver_policy->Solve();
@@ -82,6 +92,7 @@ struct ralph
             action_t a_star = std::next(std::begin(policy), sample)->first;
 
             cum_payoff += mdp->reward(tree->root->his, tree->root->state(), a_star);
+            mdp->take_gold(tree->root->state());
 
             // sample state
             auto state_dist = mdp->state_action(tree->root->his.last(), a_star);
@@ -104,7 +115,6 @@ struct ralph
                     break;
                 }
             }
-            mdp->take_gold(tree->root->state());
 
             //altrisk
             double altrisk = 0;
@@ -112,11 +122,17 @@ struct ralph
             for (auto& [action_state, var] : tau) {
 
                 if (action_state != step)
+                    std::cout << "altrisk sol: " << var->solution_value() << " in state " << action_state.second.first.first << " " << action_state.second.first.second << '\n';
                     altrisk += var->solution_value();
             }
 
             // adjust risk delta
+            std::cout << "altrisk step sol: " << tau[step]->solution_value() << " sum altrisk: " << altrisk << '\n';
             delta = (delta - altrisk) / tau[step]->solution_value();
+
+            std::cout << "root: (" << tree->root->state().first.first << ", " << tree->root->state().first.second << ") " << tree->root->state().second << '\n';
+            std::cout << "real step: action: " << a_star << " state: (" << s_star.first.first << ", " << s_star.first.second << ") " << s_star.second << '\n';
+            std::cout << "cp: " << cum_payoff << '\n';
         }
 
         std::ofstream file("ralph_result.txt", std::ios::out | std::ios::app);
@@ -139,6 +155,8 @@ struct ralph
         MPObjective* const objective = solver_policy->MutableObjective();
 
         MPConstraint* const risk_cons = solver_policy->MakeRowConstraint(0.0, risk); // risk
+
+        std::cout << "risk: " << risk << '\n';
 
         MPVariable* const r = solver_policy->MakeIntVar(1, 1, "r"); // (1)
 
@@ -271,6 +289,8 @@ struct ralph
 
             // objective
             objective->SetCoefficient(var, node->r);
+
+            std::cout << "leaf risk: " << node->r << '\n';
 
             return;
         }                   

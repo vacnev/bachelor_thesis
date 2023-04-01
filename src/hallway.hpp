@@ -34,9 +34,8 @@ struct hallway : public MDP<state_t, action_t>
         std::ifstream file(filename, std::ios::in);
 
         if (!file.is_open())
-            std::cout << "mrdka se neotevrela\n";
+            std::cout << "couldnt open file\n";
 
-        std::cout << "TROLLIN\n";
         while( std::getline(file, line) ) {
             std::cout << line << std::endl;
             plan.push_back(std::move(line));
@@ -57,6 +56,8 @@ struct hallway : public MDP<state_t, action_t>
         }
 
         assert(false);
+
+        return {};
     }
 
     bool is_fail_state(const state_t& s) override {
@@ -71,6 +72,19 @@ struct hallway : public MDP<state_t, action_t>
         if (s == f_state)
             return {};
 
+        std::pair<int, int> dir;
+        switch (s.second) {
+            case UP: dir = {-1, 0}; break;
+            case DOWN: dir = {1, 0}; break;
+            case LEFT: dir = {0, -1}; break;
+            case RIGHT: dir = {0, 1}; break;
+        }
+
+        // not bouncing into walls
+        auto coord = add(s.first, dir);
+        if (is_wall(coord))
+            return {TURN_RIGHT, TURN_LEFT};
+        
         return {TURN_RIGHT, TURN_LEFT, FORWARD};
     }
 
@@ -78,6 +92,10 @@ struct hallway : public MDP<state_t, action_t>
     std::map<state_t, double> state_action(state_t& s, action_t& a) override {
 
         std::map<state_t, double> s_a;
+
+        //std::cout << "state_action:";
+        //std::cout << '(' << s.first.first << ", " << s.first.second << ") " << s.second;
+        //std::cout << " - " << a << "\n";
 
         switch (a) {
 
@@ -149,10 +167,11 @@ struct hallway : public MDP<state_t, action_t>
                 prob -= shift_p;
 
                 if (is_trap(coord_shift)) {
+                    std::cout << "TRAP\n";
                     s_a[f_state] += shift_p * trap_p;
-                    s_a[{coord_shift, s.second}] = shift_p * (1 - trap_p);
+                    s_a.insert({std::make_pair(coord_shift, s.second), shift_p * (1 - trap_p)});
                 } else {
-                    s_a[{coord_shift, s.second}] = shift_p;
+                    s_a.insert({std::make_pair(coord_shift, s.second), shift_p});
                 }
             }
             
@@ -162,19 +181,21 @@ struct hallway : public MDP<state_t, action_t>
                 prob -= shift_p;
 
                 if (is_trap(coord_shift)) {
+                    std::cout << "TRAP\n";
                     s_a[f_state] += shift_p * trap_p;
-                    s_a[{coord_shift, s.second}] = shift_p * (1 - trap_p);
+                    s_a.insert({std::make_pair(coord_shift, s.second), shift_p * (1 - trap_p)});
                 } else {
-                    s_a[{coord_shift, s.second}] = shift_p;
+                    s_a.insert({std::make_pair(coord_shift, s.second), shift_p});
                 }
             }
 
             //forward
             if (is_trap(coord)) {
+                std::cout << "TRAP\n";
                 s_a[f_state] += prob * trap_p;
-                s_a[{coord, s.second}] = prob * (1 - trap_p);
+                s_a.insert({std::make_pair(coord, s.second), prob * (1 - trap_p)});
             } else {
-                s_a[{coord, s.second}] = prob;
+                s_a.insert({std::make_pair(coord, s.second), prob});
             }
         }
     }
@@ -184,10 +205,12 @@ struct hallway : public MDP<state_t, action_t>
     }
 
     bool is_wall(std::pair<int, int>& coord) {
-        return plan[coord.first][coord.second] == '1';
+        //std::cout << "isWALL: " << coord.first << " " << coord.second << '\n';
+        return plan[coord.first][coord.second] == '#';
     }
 
     bool is_trap(std::pair<int, int>& coord) {
+        //std::cout << "isTRAP: " << coord.first << " " << coord.second << '\n';
         return plan[coord.first][coord.second] == 'x';
     }
 
@@ -198,8 +221,13 @@ struct hallway : public MDP<state_t, action_t>
         action_t& tmp = a;
 
         // gold present and not already taken in history
-        if (plan[s.first.first][s.first.second] == 'g' &&
-            ++std::find(his.states.begin(), his.states.end(), s) == his.states.end()) {
+        if (plan[s.first.first][s.first.second] == 'g') {
+
+            for (size_t i = 0; i < his.states.size() - 1; ++i) {
+
+                if (his.states[i].first == s.first)
+                    return move_rew;
+            }
 
             return gold_rew;
         }
