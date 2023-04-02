@@ -17,7 +17,7 @@ struct ralph
     size_t depth;
 
     // maximum planning time per step
-    double T_max = 10;
+    double T_max = 3;
 
     ralph(MDP<state_t, action_t>* mdp, size_t H, double risk)
          : mdp(mdp), risk_delta(risk), depth(H) {}
@@ -84,6 +84,7 @@ struct ralph
             std::vector<double> policy_distr;
             for (auto it = policy.begin(); it != policy.end(); it++) {
                 policy_distr.emplace_back(it->second->solution_value());
+                std::cout << "action: " << it->first << " prob: " << it->second->solution_value() << '\n';
             }
            
             std::discrete_distribution<> ad(policy_distr.begin(), policy_distr.end());
@@ -202,6 +203,7 @@ struct ralph
             // objective
             double coef = node->payoff + std::pow(tree->gamma, node_depth) * node->v;
             objective->SetCoefficient(var, coef);
+            //std::cout << "leaf payoff: " << coef << '\n';
 
             // risk
             risk_cons->SetCoefficient(var, node->r);
