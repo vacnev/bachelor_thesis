@@ -27,7 +27,7 @@ struct uct_tree
 
         double v; // payoff estimate
 
-        int payoff; // cummulative payoff
+        double payoff; // cummulative payoff
 
         std::unordered_map<action_t, size_t> action_visits;
 
@@ -38,14 +38,14 @@ struct uct_tree
         std::unordered_map<action_t, std::vector<std::unique_ptr<node>>> children;
         // could be changed for pair action, state (better performance of simulate)
 
-        node(uct_tree& t, history<state_t, action_t> h, node* p, int payoff = 0)
+        node(uct_tree& t, history<state_t, action_t> h, node* p, double payoff)
              : tree(t), his(h), payoff(payoff), parent(p) {
 
             default_policy(); // sets r, v
         }
 
         // fail state nodes
-        node(uct_tree& t, history<state_t, action_t> h, node* p, double risk, int payoff = 0)
+        node(uct_tree& t, history<state_t, action_t> h, node* p, double payoff, double risk)
          : tree(t), his(h), r(risk), v(0), payoff(payoff), parent(p) {}
 
         state_t& state() {
@@ -130,7 +130,7 @@ struct uct_tree
 
     uct_tree(MDP<state_t, action_t>* mdp) : mdp(mdp) {
 
-        root = std::make_unique<node>(*this, history<state_t, action_t>(mdp->initial_state()), nullptr);
+        root = std::make_unique<node>(*this, history<state_t, action_t>(mdp->initial_state()), nullptr, 0);
     }
     
     // one mcts iteration
@@ -198,7 +198,7 @@ struct uct_tree
 
             for (auto action : mdp->get_actions(curr->state())) {
                 int rew = mdp->reward(curr->his, curr->state(), action);
-                int payoff = curr->payoff + rew;
+                double payoff = curr->payoff + std::pow(gamma, curr->his.actions.size()) * rew;
 
                 auto state_distr = mdp->state_action(curr->state(), action);
                 for (auto state_prob : state_distr) {
@@ -209,7 +209,7 @@ struct uct_tree
                     if (mdp->is_fail_state(state_prob.first)) {
                         //std::cout << "expand failt state\n";
                         curr->children[action].emplace_back(
-                            std::make_unique<node>(*this, std::move(new_h), curr, 1, payoff));
+                            std::make_unique<node>(*this, std::move(new_h), curr, payoff, 1));
                     } else
                         curr->children[action].emplace_back(
                             std::make_unique<node>(*this, std::move(new_h), curr, payoff));

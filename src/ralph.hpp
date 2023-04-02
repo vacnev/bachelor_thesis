@@ -17,7 +17,7 @@ struct ralph
     size_t depth;
 
     // maximum planning time per step
-    double T_max = 3;
+    double T_max = 1;
 
     ralph(MDP<state_t, action_t>* mdp, size_t H, double risk)
          : mdp(mdp), risk_delta(risk), depth(H) {}
@@ -55,16 +55,30 @@ struct ralph
             solver_risk->Clear();
 
             // rick contrib estimates and minimal possible risk (objective)
-            auto [tau, risk_accept] = define_LP_risk(tree.get(), solver_risk.get());
-            MPSolver::ResultStatus result_status = solver_risk->Solve();
+            //auto [tau, risk_accept] = define_LP_risk(tree.get(), solver_risk.get());
+            //MPSolver::ResultStatus result_status = solver_risk->Solve();
 
-            assert(result_status == MPSolver::OPTIMAL);
+            //tau - risk contrib estimates and minimal possible risk (objective)
+            std::map<std::pair<action_t, state_t>, double> tau;
+
+            for (auto& [ac, vec] : tree->root->children) {
+
+                for (auto it = vec.begin(); it != vec.end(); ++it) {
+
+                    auto obj = define_LP_risk(it->get(), solver_risk.get());
+                    MPSolver::ResultStatus result_status = solver_risk->Solve();
+                    assert(result_status == MPSolver::OPTIMAL);
+                    tau.insert({{ac, (*it)->state()}, obj->Value()});
+
+                    solver_risk->Clear();
+                }
+            }
 
             std::cout << "risk_solved\n" ; 
             
             // policy
             std::unordered_map<action_t, MPVariable* const> policy = define_LP_policy(tree.get(), delta, solver_policy.get());
-            result_status = solver_policy->Solve();
+            MPSolver::ResultStatus result_status = solver_policy->Solve();
 
             std::cout << "policy solved\n";
 
@@ -72,13 +86,17 @@ struct ralph
 
                 // if risk_delta is infeasable we relax the bound
                 std::cout << "alter risk\n";
-                delta = risk_accept->Value();
+                auto risk_obj = define_LP_risk(tree->root.get(), solver_risk.get());
+                result_status = solver_risk->Solve();
+                assert(result_status == MPSolver::OPTIMAL);
+
+                delta = risk_obj->Value();
+                solver_policy->Clear();
                 auto policy = define_LP_policy(tree.get(), delta, solver_policy.get());
-                const MPSolver::ResultStatus result_status = solver_policy->Solve();
+                result_status = solver_policy->Solve();
 
                 assert(result_status == MPSolver::OPTIMAL);
             }
-
 
             // sample action
             std::vector<double> policy_distr;
@@ -96,7 +114,7 @@ struct ralph
             mdp->take_gold(tree->root->state());
 
             // sample state
-            auto state_dist = mdp->state_action(tree->root->his.last(), a_star);
+            auto state_dist = mdp->state_action(tree->root->state(), a_star);
             std::vector<double> weights;
             for (auto [_, w] : state_dist) {
                 weights.emplace_back(w);
@@ -120,17 +138,22 @@ struct ralph
             //altrisk
             double altrisk = 0;
             std::pair<action_t, state_t> step(a_star, s_star);
-            for (auto& [action_state, var] : tau) {
+            for (auto& [action_state, sol] : tau) {
 
+                auto state_distr = mdp->state_action(tree->root->state(), action_state.first);
                 if (action_state != step)
                     //std::cout << "altrisk sol: " << var->solution_value() << " in state " << action_state.second.first.first << " " << action_state.second.first.second << '\n';
-                    altrisk += var->solution_value();
+                    altrisk += sol * policy[action_state.first]->solution_value() * state_distr[action_state.second];
             }
 
             // adjust risk delta
-            std::cout << "altrisk step sol: " << tau[step]->solution_value() << " sum altrisk: " << altrisk << '\n';
-            if (delta > altrisk)
-                delta = (delta - altrisk) / tau[step]->solution_value();
+            std::cout << "altrisk step sol: " << tau[step] << " sum altrisk: " << altrisk << '\n';
+            if (delta > altrisk) {
+
+                auto state_distr = mdp->state_action(tree->root->state(), a_star);
+                delta = (delta - altrisk) / (policy[a_star]->solution_value() * state_dist[s_star]);
+            }
+                
 
             std::cout << "root: (" << tree->root->state().first.first << ", " << tree->root->state().first.second << ") " << tree->root->state().second << '\n';
             std::cout << "real step: action: " << a_star << " state: (" << s_star.first.first << ", " << s_star.first.second << ") " << s_star.second << '\n';
@@ -201,9 +224,9 @@ struct ralph
         if (node->leaf()) {
 
             // objective
-            double coef = node->payoff + std::pow(tree->gamma, node_depth) * node->v;
+            double coef = (node->payoff / std::pow(tree->gamma, tree->root->his.actions.size()))  + std::pow(tree->gamma, node_depth) * node->v;
             objective->SetCoefficient(var, coef);
-            //std::cout << "leaf payoff: " << coef << '\n';
+            std::cout << "leaf payoff: " << coef << '\n';
 
             // risk
             risk_cons->SetCoefficient(var, node->r);
@@ -236,13 +259,11 @@ struct ralph
         }
     }
 
-    auto define_LP_risk(uct_tree<state_t, action_t>* tree, MPSolver* solver_risk) {
+    auto define_LP_risk(typename uct_tree<state_t, action_t>::node* root, MPSolver* solver_risk) {
 
-        std::map<std::pair<action_t, state_t>, MPVariable* const> tau; // risk contribution estimates
+        //std::map<std::pair<action_t, state_t>, MPVariable* const> tau; // risk contribution estimates
 
-        auto root = tree->root.get();
-
-        assert(!root->leaf());
+        assert(!root.leaf());
 
         size_t ctr = 0; //counter
 
@@ -273,18 +294,18 @@ struct ralph
 
                 // tau[std::make_pair(*ac_it, (*it)->state())] = st;
                 //state_t s = (*it)->state();
-                tau.insert({std::make_pair(*ac_it, (*it)->state()), st});
+                //tau.insert({std::make_pair(*ac_it, (*it)->state()), st});
 
-                LP_risk_rec(tree, it->get(), st, ctr, objective, solver_risk);
+                LP_risk_rec(it->get(), st, ctr, objective, solver_risk);
             }
         }
 
         objective->SetMinimization();
 
-        return std::make_pair(tau, objective);
+        return objective;
     }
 
-    void LP_risk_rec(uct_tree<state_t, action_t>* tree, typename uct_tree<state_t, action_t>::node* node,
+    void LP_risk_rec(typename uct_tree<state_t, action_t>::node* node,
                      MPVariable* const var, size_t& ctr,
                      MPObjective* const objective, MPSolver* solver_risk) {
 
@@ -319,7 +340,7 @@ struct ralph
                 double delta = states_distr[(*it)->state()];
                 ac_st->SetCoefficient(ac, delta);
 
-                LP_risk_rec(tree, it->get(), st, ctr, objective, solver_risk);
+                LP_risk_rec(it->get(), st, ctr, objective, solver_risk);
             }
         } 
     }

@@ -68,7 +68,7 @@ struct hallway : public MDP<state_t, action_t>
         return gold_rew;
     }
 
-    std::vector<action_t> get_actions(state_t& s) override {
+    std::vector<action_t> get_actions(const state_t& s) override {
         if (s == f_state)
             return {};
 
@@ -89,7 +89,7 @@ struct hallway : public MDP<state_t, action_t>
     }
 
     // possible outcome states, probability vector
-    std::map<state_t, double> state_action(state_t& s, action_t& a) override {
+    std::map<state_t, double> state_action(const state_t& s, const action_t& a) override {
 
         std::map<state_t, double> s_a;
 
@@ -152,7 +152,7 @@ struct hallway : public MDP<state_t, action_t>
 
     // creates state_distr for forward action for one direction
     // last 3 arguments are keys to dirs (how to move)
-    void forward_dir(state_t& s, std::map<state_t, double>& s_a, int left, int forward, int right) {
+    void forward_dir(const state_t& s, std::map<state_t, double>& s_a, int left, int forward, int right) {
 
         // left, up, down, right
         std::array<std::pair<int, int>, 4> dirs = { {{0,-1}, {-1,0}, {1,0}, {0,1}} };
@@ -200,7 +200,7 @@ struct hallway : public MDP<state_t, action_t>
         }
     }
 
-    std::pair<int, int> add(std::pair<int, int>& l, std::pair<int, int>& r) {
+    std::pair<int, int> add(const std::pair<int, int>& l, const std::pair<int, int>& r) {
         return {l.first + r.first, l.second + r.second};
     }
 
@@ -216,9 +216,7 @@ struct hallway : public MDP<state_t, action_t>
 
 
     // treasure reward for action from treasure state
-    int reward(history<state_t, action_t>& his, state_t& s, action_t& a) override {
-
-        action_t& tmp = a;
+    int reward(history<state_t, action_t>& his, const state_t& s, const action_t& a) override {
 
         // gold present and not already taken in history
         if (plan[s.first.first][s.first.second] == 'g') {
@@ -236,7 +234,7 @@ struct hallway : public MDP<state_t, action_t>
     }
 
     // at real step
-    void take_gold(state_t& s) override {
+    void take_gold(const state_t& s) override {
 
         if (plan[s.first.first][s.first.second] == 'g') {
             plan[s.first.first][s.first.second] = ' ';

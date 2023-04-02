@@ -51,16 +51,16 @@ struct despot
         size_t depth;
         double risk; // risk estimate
         node* parent;
-        int payoff; // cumulative payoff
+        double payoff; // cumulative payoff
         
         node(despot& tree, history<state_t, action_t> h, std::vector<std::vector<double>>&& scenarios,
-             node* parent = NULL, size_t depth = 0, int payoff = 0)
+             node* parent = NULL, size_t depth = 0, double payoff = 0)
              : tree(tree), his(h), scenarios(std::move(scenarios)), parent(parent), depth(depth), payoff(payoff) {
             initialize_values();
         }
 
         // fail state node
-        node(despot& tree, history<state_t, action_t> h, node* parent, size_t depth, int payoff)
+        node(despot& tree, history<state_t, action_t> h, node* parent, size_t depth, double payoff)
              : tree(tree), his(h), parent(parent), depth(depth), payoff(payoff),
                risk(1), U_value(0), L_value(0), l_rwdu(0), u_rwdu(0) {}
 
@@ -176,7 +176,7 @@ struct despot
 
                     action_t action = actions[i];
                     auto states_distr = mdp.state_action(n->state, action);
-                    int payoff = n->payoff + std::pow(gamma, n->depth) * mdp.reward(n->his, n->state, action);
+                    double payoff = n->payoff + std::pow(gamma, n->depth) * mdp.reward(n->his, n->state, action);
 
                     for (size_t j = 0; j < n->scenarios.size(); j++) {
                         double s = n->scenarios[j][n->depth];
