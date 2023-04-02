@@ -13,10 +13,10 @@ enum action_t { TURN_RIGHT, TURN_LEFT, FORWARD };
 struct hallway : public MDP<state_t, action_t>
 {
     // probability we shift during forward
-    double shift_p = 0.20;
+    double shift_p = 0;
 
     // probability trap sets
-    double trap_p = 0.6;
+    double trap_p = 0.05;
 
     // fail state sink
     state_t f_state = {{0, 0}, UP};
