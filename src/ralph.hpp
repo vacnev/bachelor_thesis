@@ -231,7 +231,7 @@ struct ralph
             // objective
             double coef = (node->payoff / std::pow(tree->gamma, tree->root->his.actions.size()))  + std::pow(tree->gamma, node_depth) * node->v;
             objective->SetCoefficient(var, coef);
-            std::cout << "leaf payoff: " << coef << " from first action: " << node->his.actions[0] << " with risk: " << node->r << '\n';
+            //std::cout << "leaf payoff: " << coef << " from first action: " << node->his.actions[0] << " with risk: " << node->r << '\n';
 
             // risk
             risk_cons->SetCoefficient(var, node->r);

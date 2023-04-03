@@ -86,15 +86,15 @@ struct uct_tree
             v = 0;
             r = 0;
 
-            for (size_t i = 0; i < default_playouts; ++i) {
+            for (size_t i = 0; i < tree.default_playouts; ++i) {
                 history<state_t, action_t> h = his;
                 auto [v_est, r_est] = default_rec(h, state(), 0);
                 v += v_est;
                 r += r_est;
             }
 
-            v /= default_playouts;
-            r /= default_playouts;
+            v /= tree.default_playouts;
+            r /= tree.default_playouts;
         }
 
         // payoff, risk
