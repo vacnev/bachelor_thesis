@@ -1,4 +1,4 @@
-#include "mdp.hpp"
+#include "../mdp.hpp"
 
 // if fail state kills us with prob 1, then there is no point in exploring such states
 // if not, despot can be modified to continue exploration (default_policy, explore)
@@ -34,9 +34,9 @@ struct despot
     double gamma = 0.95;
 
     // maximum planning time per step
-    int T_max = 1;
+    int T_max = 3;
 
-    std::mt19937 generator(std::random_device{}());
+    std::mt19937 generator{std::random_device{}()};
 
     struct node
     {
@@ -73,7 +73,7 @@ struct despot
         void initialize_values() {
             default_policy();
 
-            U_value = tree.mdp.max_reward() / (1 - tree.gamma);
+            U_value = tree.mdp->max_reward() / (1 - tree.gamma);
             l_rwdu = (scenarios.size() / (double) tree.K) * std::pow(tree.gamma, depth) * L_value;
             u_rwdu = (scenarios.size() / (double) tree.K) * std::pow(tree.gamma, depth) * U_value - tree.lambda;
 
@@ -100,21 +100,21 @@ struct despot
         // payoff, risk
         std::pair<double, double> default_policy_rec(size_t step, history<state_t, action_t>& h, std::vector<double>& scenar) {
             
-            if (tree.mdp.is_fail_state(h.last()))
+            if (tree.mdp->is_fail_state(h.last()))
                 return {0, 1};
 
             if (step == tree.D_default)
                 return {0, 0};
 
-            std::vector<action_t> actions = tree.mdp.get_actions(h.last());
+            std::vector<action_t> actions = tree.mdp->get_actions(h.last());
             std::uniform_int_distribution<std::size_t> distr(0, actions.size() - 1);
             size_t a = distr(tree.generator);
             action_t action = actions[a];
             
             // state distr
-            auto state_distr = tree.mdp.state_action(curr, action);
+            auto state_distr = tree.mdp->state_action(h.last(), action);
             state_t next = tree.sample_state(state_distr, scenar[tree.D + step]);
-            int rew = tree.mdp.reward(h, h.last(), action);
+            int rew = tree.mdp->reward(h, h.last(), action);
             h.add(action, next);
 
             auto child = default_policy_rec(step + 1, h, scenar);
@@ -150,11 +150,11 @@ struct despot
     void build_despot() {
 
         // start time
-        auto start = std::chrono::steady_clock()::now();
+        auto start = std::chrono::steady_clock::now();
 
         // until we reach desired gap or time
         while (n0->eta() > eta0 && 
-               std::chrono::duration<double>(std::chrono::steady_clock()::now() - start) < T_max) {
+               std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count() < T_max) {
 
             node* n = explore(n0.get());
             backup(n);
@@ -168,7 +168,7 @@ struct despot
             // leaf node - expansion
             if (n->leaf()) {
                 
-                std::vector<action_t> actions = mdp.get_actions(n->state());
+                std::vector<action_t> actions = mdp->get_actions(n->state());
 
                 for (size_t i = 0; i < actions.size(); i++) {
 
@@ -176,8 +176,8 @@ struct despot
                     std::map<state_t, std::vector<scenario>> distr;
 
                     action_t action = actions[i];
-                    auto states_distr = mdp.state_action(n->state(), action);
-                    double payoff = n->payoff + std::pow(gamma, n->depth) * mdp.reward(n->his, n->state(), action);
+                    auto states_distr = mdp->state_action(n->state(), action);
+                    double payoff = n->payoff + std::pow(gamma, n->depth) * mdp->reward(n->his, n->state(), action);
 
                     for (size_t j = 0; j < n->scenarios.size(); j++) {
                         double s = n->scenarios[j][n->depth];
@@ -194,10 +194,10 @@ struct despot
 
                         std::unique_ptr<node> new_node;
 
-                        if (mdp.is_fail_state(it->first)) {
-                            new_node = {*this, new_h, n, n->depth + 1, payoff};
+                        if (mdp->is_fail_state(it->first)) {
+                            new_node = std::make_unique<node>(*this, new_h, n, n->depth + 1, payoff);
                         } else {
-                            new_node = {*this, new_h, std::move(it->second), n, n->depth + 1, payoff};
+                            new_node = std::make_unique<node>(*this, new_h, std::move(it->second), n, n->depth + 1, payoff);
                         }
 
                         n->children[action].push_back(std::move(new_node));
@@ -210,11 +210,11 @@ struct despot
             auto comp = [&](auto& a, auto& b) {
                 double coef = (n->scenarios.size() / (double) K) * std::pow(gamma, n->depth);
 
-                double left = std::accumulate(a.second.begin(), a.second.end(), 0, [](auto& c, auto&r) {return c + r->rwdu;});
-                left += coef * mdp.reward(n->his, n->state, a.first) - lambda;
+                double left = std::accumulate(a.second.begin(), a.second.end(), 0, [](auto& c, auto&r) {return c + r->u_rwdu;});
+                left += coef * mdp->reward(n->his, n->state(), a.first) - lambda;
 
-                double right = std::accumulate(b.second.begin(), b.second.end(), 0, [](auto& c, auto&r) {return c + r->rwdu;});
-                right += coef * mdp.reward(n->his, n->state, b.first) - lambda;
+                double right = std::accumulate(b.second.begin(), b.second.end(), 0, [](auto& c, auto&r) {return c + r->u_rwdu;});
+                right += coef * mdp->reward(n->his, n->state(), b.first) - lambda;
 
                 return left < right;
             };
@@ -224,7 +224,7 @@ struct despot
             // s* -> next node
 
             n = std::max_element(n->children[a_star].begin(), n->children[a_star].end(),
-                [this](auto& a, auto&b) {return excess_uncertainty(a.get()) < excess_uncertainty(b.get());});
+                [this](auto& a, auto&b) {return excess_uncertainty(a.get()) < excess_uncertainty(b.get());})->get();
 
             
             if (n->depth > D)
@@ -294,7 +294,7 @@ struct despot
                     sum_l += child->l_rwdu;
                 }
 
-                int rew = mdp.reward(n->his, n->state(), action);
+                int rew = mdp->reward(n->his, n->state(), action);
                 U_argmax.emplace_back(rew + gamma * sum_U);
 
                 double w_rew = (n->scenarios.size() / (double) K) * std::pow(gamma, n->depth) * rew - lambda;
@@ -307,8 +307,8 @@ struct despot
             l_argmax.push_back(l0);
 
             n->U_value = *std::max_element(U_argmax.begin(), U_argmax.end());
-            n->u_value = *std::max_element(u_argmax.begin(), u_argmax.end());
-            n->l_value = *std::max_element(l_argmax.begin(), l_argmax.end());
+            n->u_rwdu = *std::max_element(u_argmax.begin(), u_argmax.end());
+            n->l_rwdu = *std::max_element(l_argmax.begin(), l_argmax.end());
 
             n = n->parent; // move up
         }
@@ -336,12 +336,12 @@ struct despot
     // sample state using a scenar
     state_t sample_state(std::map<state_t, double>& states_distr, double scenar) {
 
-        for (auto it = states_distr.begin(); it != states_distr.end(); ++it) [
+        for (auto it = states_distr.begin(); it != states_distr.end(); ++it) {
             if (scenar <= it->second)
                 return it->first;
 
             scenar -= it->second;
-        ]
+        }
 
         assert(false);
 

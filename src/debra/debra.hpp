@@ -1,5 +1,5 @@
 #include "despot.hpp"
-#include "include/ortools/linear_solver/linear_solver.h"
+#include "ortools/linear_solver/linear_solver.h"
 
 using namespace operations_research;
 
@@ -16,7 +16,7 @@ struct debra
 
     std::mt19937 generator{std::random_device{}()};
 
-    debra(MDP* mdp, size_t depth, double risk_delta)
+    debra(MDP<state_t, action_t>* mdp, size_t depth, double risk_delta)
          : mdp(mdp), depth(depth), risk_delta(risk_delta) {}
 
     // sample episode, write (to file) trajectory (policy observation), cummulative reward
@@ -26,7 +26,7 @@ struct debra
         std::unique_ptr<MPSolver> solver_policy(MPSolver::CreateSolver("GLOP"));
         std::unique_ptr<MPSolver> solver_risk(MPSolver::CreateSolver("GLOP"));
 
-        history<state_t, action_t> h{mdp.initial_state()};
+        history<state_t, action_t> h{mdp->initial_state()};
 
         int cum_payoff = 0;
 
@@ -35,6 +35,8 @@ struct debra
         for (size_t i = 0; i < depth; i++) {
 
             auto tree = std::make_unique<despot<state_t, action_t>>(mdp, depth - i, h);
+
+            std::cout << "simul ended\n";
 
             solver_policy->Clear();
             solver_risk->Clear();
@@ -67,12 +69,12 @@ struct debra
             if (result_status == MPSolver::INFEASIBLE) {
 
                 // if risk_delta is infeasable we relax the bound
-                std::cout << "alter risk\n";
                 auto risk_obj = define_LP_risk(tree->n0.get(), solver_risk.get());
                 result_status = solver_risk->Solve();
                 assert(result_status == MPSolver::OPTIMAL);
 
                 delta = risk_obj->Value();
+                std::cout << "alter risk" << delta << '\n';
                 solver_policy->Clear();
                 auto policy = define_LP_policy(tree.get(), delta, solver_policy.get());
                 result_status = solver_policy->Solve();
@@ -91,7 +93,7 @@ struct debra
 
             action_t a_star = std::next(std::begin(policy), sample)->first;
 
-            cum_payoff += mdp.reward(h, h.last(), a_star);
+            cum_payoff += mdp->reward(h, h.last(), a_star);
             mdp->take_gold(h.last());
 
             // sample state
@@ -108,6 +110,8 @@ struct debra
 
             // step
             h.add(a_star, s_star);
+
+            std::cout << "altrisk cal\n";
 
             //altrisk
             double altrisk = 0;
@@ -140,7 +144,7 @@ struct debra
         file.close();
     }
 
-    std::unordered_map<action_t, MPVariable*> define_LP_policy(despot<state_t, action_t>* tree,
+    std::unordered_map<action_t, MPVariable* const> define_LP_policy(despot<state_t, action_t>* tree,
                                                                double risk, MPSolver* solver_policy) {
 
         std::unordered_map<action_t, MPVariable* const> policy;
@@ -179,7 +183,7 @@ struct debra
                 double delta = states_distr[(*it)->state()];
                 ac_st->SetCoefficient(ac, delta);
 
-                LP_policy_rec(tree, it->get(), st, ctr, risk_cons, objective, solver_policy)
+                LP_policy_rec(tree, it->get(), st, ctr, risk_cons, objective, solver_policy);
             }
         }
 
@@ -189,7 +193,7 @@ struct debra
         return policy;
     }
 
-    void LP_policy_rec(despot<state_t, action_t>* tree, despot<state_t, action_t>::node* node, MPVariable* const var, size_t& ctr,
+    void LP_policy_rec(despot<state_t, action_t>* tree, typename despot<state_t, action_t>::node* node, MPVariable* const var, size_t& ctr,
                        MPConstraint* const risk_cons, MPObjective* const objective, MPSolver* solver_policy) {
 
         if (node->leaf()) {
