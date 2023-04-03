@@ -16,7 +16,7 @@ struct uct_tree
     size_t default_playouts = 10;
 
     // discount factor
-    double gamma = 0.9;
+    double gamma = 0.95;
 
     struct node
     {

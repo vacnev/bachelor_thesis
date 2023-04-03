@@ -152,7 +152,7 @@ struct ralph
             }
 
             // adjust risk delta
-            std::cout << "altrisk step sol: " << tau[step] << " sum altrisk: " << altrisk << '\n';
+            //std::cout << "altrisk step sol: " << tau[step] << " sum altrisk: " << altrisk << '\n';
             if (delta > altrisk) {
 
                 auto state_distr = mdp->state_action(tree->root->state(), a_star);
@@ -160,7 +160,7 @@ struct ralph
             }
                 
 
-            std::cout << "root: (" << tree->root->state().first.first << ", " << tree->root->state().first.second << ") " << tree->root->state().second << '\n';
+            //std::cout << "root: (" << tree->root->state().first.first << ", " << tree->root->state().first.second << ") " << tree->root->state().second << '\n';
             std::cout << "real step: action: " << a_star << " state: (" << s_star.first.first << ", " << s_star.first.second << ") " << s_star.second << '\n';
             std::cout << "cp: " << cum_payoff << '\n';
         }

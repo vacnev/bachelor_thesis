@@ -1,5 +1,4 @@
 #include "mdp.hpp"
-#include <time.h>
 
 // if fail state kills us with prob 1, then there is no point in exploring such states
 // if not, despot can be modified to continue exploration (default_policy, explore)
@@ -11,10 +10,10 @@ struct despot
 {
     // TODO: set intial params
 
-    MDP<state_t, action_t>& mdp;
+    MDP<state_t, action_t>* mdp;
 
     // target gap
-    double eta0 = 0.01;
+    double eta0 = 0.1;
 
     // target rate
     double eta_rate = 0.95;
@@ -26,7 +25,7 @@ struct despot
     size_t D;
 
     // regularization const
-    double lambda = 1;
+    double lambda = 0.1;
 
     // steps of default policy
     size_t D_default = 10;
@@ -35,7 +34,9 @@ struct despot
     double gamma = 0.95;
 
     // maximum planning time per step
-    int T_max = 60;
+    int T_max = 1;
+
+    std::mt19937 generator(std::random_device{}());
 
     struct node
     {
@@ -54,7 +55,7 @@ struct despot
         double payoff; // cumulative payoff
         
         node(despot& tree, history<state_t, action_t> h, std::vector<std::vector<double>>&& scenarios,
-             node* parent = NULL, size_t depth = 0, double payoff = 0)
+             node* parent = nullptr, size_t depth = 0, double payoff = 0)
              : tree(tree), his(h), scenarios(std::move(scenarios)), parent(parent), depth(depth), payoff(payoff) {
             initialize_values();
         }
@@ -82,13 +83,12 @@ struct despot
 
         // random playouts, sets L0 and risk
         void default_policy() {
-            std::mt19937 generator(std::random_device{}());
             double L = 0;
             double r = 0;
-            state_t curr = his.last();
 
             for (size_t i = 0; i < scenarios.size(); i++) {
-                auto result = default_policy_rec(0, curr, generator, scenarios[i]);
+                history<state_t, action_t> h = his;
+                auto result = default_policy_rec(0, h, scenarios[i]);
                 L += result.first;
                 r += result.second;
             }
@@ -98,25 +98,26 @@ struct despot
         }
 
         // payoff, risk
-        std::pair<double, double> default_policy_rec(size_t step, state_t curr, std::mt19937& generator, std::vector<double>& scenar) {
+        std::pair<double, double> default_policy_rec(size_t step, history<state_t, action_t>& h, std::vector<double>& scenar) {
             
-            if (tree.mdp.is_fail_state(curr))
+            if (tree.mdp.is_fail_state(h.last()))
                 return {0, 1};
 
             if (step == tree.D_default)
                 return {0, 0};
 
-            std::vector<action_t> actions = tree.mdp.get_actions(curr);
+            std::vector<action_t> actions = tree.mdp.get_actions(h.last());
             std::uniform_int_distribution<std::size_t> distr(0, actions.size() - 1);
-            size_t a = distr(generator);
+            size_t a = distr(tree.generator);
             action_t action = actions[a];
             
             // state distr
             auto state_distr = tree.mdp.state_action(curr, action);
             state_t next = tree.sample_state(state_distr, scenar[tree.D + step]);
-            int rew = tree.mdp.reward(his, curr, action);
+            int rew = tree.mdp.reward(h, h.last(), action);
+            h.add(action, next);
 
-            auto child = default_policy_rec(step + 1, next, generator, scenar);
+            auto child = default_policy_rec(step + 1, h, scenar);
 
             return {rew + tree.gamma * child.first, child.second};
         }
@@ -139,7 +140,7 @@ struct despot
     // init node
     std::unique_ptr<node> n0;
 
-    despot(MDP<state_t, action_t> mdp, size_t depth, history<state_t, action_t> h0) : mdp(mdp), D(depth) {
+    despot(MDP<state_t, action_t>* mdp, size_t depth, history<state_t, action_t> h0) : mdp(mdp), D(depth) {
         
         std::vector<scenario> scenarios = sample_scenarios();
         n0 = std::make_unique<node>(*this, h0, std::move(scenarios));
@@ -167,7 +168,7 @@ struct despot
             // leaf node - expansion
             if (n->leaf()) {
                 
-                std::vector<action_t> actions = mdp.get_actions(n->state);
+                std::vector<action_t> actions = mdp.get_actions(n->state());
 
                 for (size_t i = 0; i < actions.size(); i++) {
 
@@ -175,8 +176,8 @@ struct despot
                     std::map<state_t, std::vector<scenario>> distr;
 
                     action_t action = actions[i];
-                    auto states_distr = mdp.state_action(n->state, action);
-                    double payoff = n->payoff + std::pow(gamma, n->depth) * mdp.reward(n->his, n->state, action);
+                    auto states_distr = mdp.state_action(n->state(), action);
+                    double payoff = n->payoff + std::pow(gamma, n->depth) * mdp.reward(n->his, n->state(), action);
 
                     for (size_t j = 0; j < n->scenarios.size(); j++) {
                         double s = n->scenarios[j][n->depth];
@@ -188,14 +189,11 @@ struct despot
 
                     for (auto it = distr.begin(); it != distr.end(); it++) {
 
-                        history new_h = n->his;
+                        history<state_t, action_t> new_h = n->his;
                         new_h.add(action, it->first);
 
                         std::unique_ptr<node> new_node;
 
-                        //treasure
-                        //int t_pay = payoff + std::pow(gamma, n->depth) * mdp.is_treasure(it->first);
-                        
                         if (mdp.is_fail_state(it->first)) {
                             new_node = {*this, new_h, n, n->depth + 1, payoff};
                         } else {
@@ -216,7 +214,7 @@ struct despot
                 left += coef * mdp.reward(n->his, n->state, a.first) - lambda;
 
                 double right = std::accumulate(b.second.begin(), b.second.end(), 0, [](auto& c, auto&r) {return c + r->rwdu;});
-                right += coef * mdp.reward(n->his, n->state, b.first)- lambda;
+                right += coef * mdp.reward(n->his, n->state, b.first) - lambda;
 
                 return left < right;
             };
@@ -266,7 +264,7 @@ struct despot
             if (!pruned)
                 break;
 
-            n = parent;
+            n = n->parent;
         }
 
         return blocked;
@@ -317,14 +315,16 @@ struct despot
     }
 
     std::vector<std::vector<double>> sample_scenarios() {
-        std::vector<std::vector<double>> scenarios;
-        std::srand( (unsigned) time(NULL) );
+        std::vector<scenario> scenarios;
+        std::uniform_real_distribution d;
+        //std::srand( (unsigned) time(NULL) );
 
         for(size_t i = 0; i < K; i++) {
-            std::vector<double> scenar;
+            scenario scenar;
 
             for (size_t j = 0; j < D + D_default; j++) {
-                scenar.emplace_back((double) std::rand() / RAND_MAX);
+                //scenar.emplace_back((double) std::rand() / RAND_MAX);
+                scenar.emplace_back(d(generator));
             }
             
             scenarios.push_back(std::move(scenar));
@@ -344,6 +344,8 @@ struct despot
         ]
 
         assert(false);
+
+        return {};
     }
 
 
