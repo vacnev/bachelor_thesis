@@ -12,6 +12,9 @@ struct uct_tree
     // depth of random playouts
     size_t steps_default = 10;
 
+    // number of ranfom playouts
+    size_t default_playouts = 10;
+
     // discount factor
     double gamma = 0.9;
 
@@ -23,10 +26,6 @@ struct uct_tree
 
         size_t N = 0; //number of visits
 
-        double r; // risk estimate
-
-        double v; // payoff estimate
-
         double payoff; // cummulative payoff
 
         std::unordered_map<action_t, size_t> action_visits;
@@ -34,6 +33,10 @@ struct uct_tree
         std::unordered_map<action_t, double> action_payoff;
 
         node* parent;
+
+        double r; // risk estimate
+
+        double v; // payoff estimate
 
         std::unordered_map<action_t, std::vector<std::unique_ptr<node>>> children;
         // could be changed for pair action, state (better performance of simulate)
@@ -46,7 +49,7 @@ struct uct_tree
 
         // fail state nodes
         node(uct_tree& t, history<state_t, action_t> h, node* p, double payoff, double risk)
-         : tree(t), his(h), r(risk), v(0), payoff(payoff), parent(p) {}
+         : tree(t), his(h), payoff(payoff), parent(p), r(risk), v(0) {}
 
         state_t& state() {
             return his.last();
@@ -80,11 +83,18 @@ struct uct_tree
         // random playouts, sets r and v
         void default_policy() {
 
-            history<state_t, action_t> h = his;
-            auto [v_est, r_est] = default_rec(h, state(), 0);
+            v = 0;
+            r = 0;
 
-            v = v_est;
-            r = r_est;
+            for (size_t i = 0; i < default_playouts; ++i) {
+                history<state_t, action_t> h = his;
+                auto [v_est, r_est] = default_rec(h, state(), 0);
+                v += v_est;
+                r += r_est;
+            }
+
+            v /= default_playouts;
+            r /= default_playouts;
         }
 
         // payoff, risk
@@ -139,7 +149,7 @@ struct uct_tree
         size_t depth = 0;
         node* curr = root.get();
 
-        // find leaf
+        // find leaf, node selection
         while (!curr->leaf()) {
 
             //std::cout << "uct selection:";
@@ -194,6 +204,7 @@ struct uct_tree
 
         //std::cout << "node selection done\n";
 
+        // expansion
         if (depth < steps && !mdp->is_fail_state(curr->state())) {
 
             for (auto action : mdp->get_actions(curr->state())) {

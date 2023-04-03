@@ -65,6 +65,11 @@ struct ralph
 
                 for (auto it = vec.begin(); it != vec.end(); ++it) {
 
+                    if (mdp->is_fail_state((*it)->state())) {
+                        tau.insert({{ac, (*it)->state()}, 1});
+                        continue;
+                    }
+
                     auto obj = define_LP_risk(it->get(), solver_risk.get());
                     MPSolver::ResultStatus result_status = solver_risk->Solve();
                     assert(result_status == MPSolver::OPTIMAL);
