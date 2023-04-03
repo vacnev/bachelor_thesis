@@ -97,7 +97,7 @@ struct ralph
 
                 delta = risk_obj->Value();
                 solver_policy->Clear();
-                auto policy = define_LP_policy(tree.get(), delta, solver_policy.get());
+                policy = define_LP_policy(tree.get(), delta, solver_policy.get());
                 result_status = solver_policy->Solve();
 
                 assert(result_status == MPSolver::OPTIMAL);

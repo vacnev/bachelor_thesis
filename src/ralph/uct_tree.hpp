@@ -5,7 +5,7 @@ struct uct_tree
 {
     MDP<state_t, action_t>* mdp;
 
-    double c = 0.1; //exploration constant
+    double c = 0.2; //exploration constant
 
     std::mt19937 generator{std::random_device{}()};
 

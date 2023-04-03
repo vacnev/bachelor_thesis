@@ -76,11 +76,16 @@ struct debra
                 delta = risk_obj->Value();
                 std::cout << "alter risk" << delta << '\n';
                 solver_policy->Clear();
-                auto policy = define_LP_policy(tree.get(), delta, solver_policy.get());
+                policy = define_LP_policy(tree.get(), delta, solver_policy.get());
                 result_status = solver_policy->Solve();
 
                 assert(result_status == MPSolver::OPTIMAL);
+
+                if (result_status == MPSolver::INFEASIBLE)
+                    std::cout << "altrisk infeasable\n";
             }
+
+            std::cout << "sample action\n";
 
             // sample action
             std::vector<double> policy_distr;
@@ -95,6 +100,8 @@ struct debra
 
             cum_payoff += mdp->reward(h, h.last(), a_star);
             mdp->take_gold(h.last());
+
+            std::cout << "sample state\n";
 
             // sample state
             auto state_dist = mdp->state_action(h.last(), a_star);

@@ -13,7 +13,7 @@ struct despot
     MDP<state_t, action_t>* mdp;
 
     // target gap
-    double eta0 = 0.1;
+    double eta0 = 1;
 
     // target rate
     double eta_rate = 0.95;
@@ -34,7 +34,7 @@ struct despot
     double gamma = 0.95;
 
     // maximum planning time per step
-    int T_max = 3;
+    int T_max = 5;
 
     std::mt19937 generator{std::random_device{}()};
 
