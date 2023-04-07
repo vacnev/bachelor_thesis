@@ -25,7 +25,7 @@ struct despot
     size_t D;
 
     // regularization const
-    double lambda = 0.1;
+    double lambda = 0.01;
 
     // steps of default policy
     size_t D_default = 10;
@@ -34,7 +34,7 @@ struct despot
     double gamma = 0.95;
 
     // maximum planning time per step
-    int T_max = 5;
+    int T_max = 10;
 
     std::mt19937 generator{std::random_device{}()};
 
@@ -73,7 +73,7 @@ struct despot
         void initialize_values() {
             default_policy();
 
-            U_value = tree.mdp->max_reward() / (1 - tree.gamma);
+            U_value = tree.mdp->max_payoff();
             l_rwdu = (scenarios.size() / (double) tree.K) * std::pow(tree.gamma, depth) * L_value;
             u_rwdu = (scenarios.size() / (double) tree.K) * std::pow(tree.gamma, depth) * U_value - tree.lambda;
 

@@ -36,7 +36,7 @@ struct debra
 
             auto tree = std::make_unique<despot<state_t, action_t>>(mdp, depth - i, h);
 
-            std::cout << "simul ended\n";
+            //std::cout << "simul ended\n";
 
             solver_policy->Clear();
             solver_risk->Clear();
@@ -81,16 +81,17 @@ struct debra
 
                 assert(result_status == MPSolver::OPTIMAL);
 
-                if (result_status == MPSolver::INFEASIBLE)
-                    std::cout << "altrisk infeasable\n";
+                //if (result_status == MPSolver::INFEASIBLE)
+                 //   std::cout << "altrisk infeasable\n";
             }
 
-            std::cout << "sample action\n";
+            //std::cout << "sample action\n";
 
             // sample action
             std::vector<double> policy_distr;
             for (auto it = policy.begin(); it != policy.end(); it++) {
                 policy_distr.emplace_back(it->second->solution_value());
+                std::cout << "action: " << it->first << " prob: " << it->second->solution_value() << '\n';
             }
            
             std::discrete_distribution<> ad(policy_distr.begin(), policy_distr.end());
@@ -99,7 +100,10 @@ struct debra
             action_t a_star = std::next(std::begin(policy), sample)->first;
 
             cum_payoff += mdp->reward(h, h.last(), a_star);
-            mdp->take_gold(h.last());
+
+            // all gold taken
+            if (mdp->take_gold(h.last()))
+                break;
 
             std::cout << "sample state\n";
 
@@ -118,7 +122,7 @@ struct debra
             // step
             h.add(a_star, s_star);
 
-            std::cout << "altrisk cal\n";
+            //std::cout << "altrisk cal\n";
 
             //altrisk
             double altrisk = 0;
@@ -146,7 +150,7 @@ struct debra
         }
 
         std::ofstream file("debra_result.txt", std::ios::out | std::ios::app);
-        file << cum_payoff << ' ';
+        file << cum_payoff << " KILLED: " << mdp->is_fail_state(h.last()) << " ";
         mdp->write_history(file, h);
         file.close();
     }

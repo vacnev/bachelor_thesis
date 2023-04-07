@@ -13,10 +13,10 @@ enum action_t { TURN_RIGHT, TURN_LEFT, FORWARD };
 struct hallway : public MDP<state_t, action_t>
 {
     // probability we shift during forward
-    double shift_p = 0;
+    double shift_p;
 
     // probability trap sets
-    double trap_p = 0.05;
+    double trap_p;
 
     // fail state sink
     state_t f_state = {{0, 0}, UP};
@@ -27,9 +27,13 @@ struct hallway : public MDP<state_t, action_t>
     // gold rew
     int gold_rew = 100;
 
+    // number of gold
+    int gold_count;
+
     std::vector<std::string> plan;
 
-    hallway(std::string filename) {
+    hallway(std::string filename, double s, double t, int g_c)
+           : shift_p(s), trap_p(t), gold_count(g_c) {
         std::string line;
         std::ifstream file(filename, std::ios::in);
 
@@ -60,12 +64,20 @@ struct hallway : public MDP<state_t, action_t>
         return {};
     }
 
+    int gold_rem() override {
+        return gold_count;
+    }
+
+    int gold_reward() override {
+        return gold_rew;
+    }
+
     bool is_fail_state(const state_t& s) override {
         return s == f_state;
     }
 
-    int max_reward() override {
-        return gold_rew;
+    int max_payoff() override {
+        return gold_rew * gold_count;
     }
 
     std::vector<action_t> get_actions(const state_t& s) override {
@@ -234,11 +246,15 @@ struct hallway : public MDP<state_t, action_t>
     }
 
     // at real step
-    void take_gold(const state_t& s) override {
+    // return true if all golds have been taken
+    bool take_gold(const state_t& s) override {
 
         if (plan[s.first.first][s.first.second] == 'g') {
             plan[s.first.first][s.first.second] = ' ';
+            gold_count--;
         }
+
+        return !gold_count;
     }
 
     // write history for eval

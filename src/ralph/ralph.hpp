@@ -46,7 +46,7 @@ struct ralph
                 tree->simulate(depth - i);
             }
 
-            std::cout << "end simulation\n";
+            //std::cout << "end simulation\n";
 
             //std::unique_ptr<MPSolver> solver_policy(MPSolver::CreateSolver("GLOP"));
             //std::unique_ptr<MPSolver> solver_risk(MPSolver::CreateSolver("GLOP"));
@@ -79,13 +79,13 @@ struct ralph
                 }
             }
 
-            std::cout << "risk_solved\n" ; 
+            //std::cout << "risk_solved\n" ; 
             
             // policy
             std::unordered_map<action_t, MPVariable* const> policy = define_LP_policy(tree.get(), delta, solver_policy.get());
             MPSolver::ResultStatus result_status = solver_policy->Solve();
 
-            std::cout << "policy solved\n";
+            //std::cout << "policy solved\n";
 
             if (result_status == MPSolver::INFEASIBLE) {
 
@@ -116,7 +116,11 @@ struct ralph
             action_t a_star = std::next(std::begin(policy), sample)->first;
 
             cum_payoff += mdp->reward(tree->root->his, tree->root->state(), a_star);
-            mdp->take_gold(tree->root->state());
+
+            if (mdp->take_gold(tree->root->state())) {
+                std::cout << "all gold taken\n";
+                break;
+            }
 
             // sample state
             auto state_dist = mdp->state_action(tree->root->state(), a_star);
@@ -165,8 +169,9 @@ struct ralph
             std::cout << "cp: " << cum_payoff << '\n';
         }
 
+        std::cout << "file write\n";
         std::ofstream file("ralph_result.txt", std::ios::out | std::ios::app);
-        file << cum_payoff << ' ';
+        file << cum_payoff << " KILLED: " << mdp->is_fail_state(tree->root->state()) << " ";
         mdp->write_history(file, tree->root->his);
         file.close();
     }

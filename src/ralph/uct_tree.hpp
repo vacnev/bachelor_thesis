@@ -5,7 +5,7 @@ struct uct_tree
 {
     MDP<state_t, action_t>* mdp;
 
-    double c = 0.2; //exploration constant
+    double c = 0.1; //exploration constant
 
     std::mt19937 generator{std::random_device{}()};
 
@@ -38,18 +38,20 @@ struct uct_tree
 
         double v; // payoff estimate
 
+        int gold_count; // remaining gold
+
         std::unordered_map<action_t, std::vector<std::unique_ptr<node>>> children;
         // could be changed for pair action, state (better performance of simulate)
 
-        node(uct_tree& t, history<state_t, action_t> h, node* p, double payoff)
-             : tree(t), his(h), payoff(payoff), parent(p) {
+        node(uct_tree& t, history<state_t, action_t> h, node* p, double payoff, int g_c)
+             : tree(t), his(h), payoff(payoff), parent(p), gold_count(g_c) {
 
             default_policy(); // sets r, v
         }
 
         // fail state nodes
         node(uct_tree& t, history<state_t, action_t> h, node* p, double payoff, double risk)
-         : tree(t), his(h), payoff(payoff), parent(p), r(risk), v(0) {}
+         : tree(t), his(h), payoff(payoff), parent(p), r(risk), v(0), gold_count(0) {}
 
         state_t& state() {
             return his.last();
@@ -140,7 +142,7 @@ struct uct_tree
 
     uct_tree(MDP<state_t, action_t>* mdp) : mdp(mdp) {
 
-        root = std::make_unique<node>(*this, history<state_t, action_t>(mdp->initial_state()), nullptr, 0);
+        root = std::make_unique<node>(*this, history<state_t, action_t>(mdp->initial_state()), nullptr, 0, mdp->gold_rem());
     }
     
     // one mcts iteration
@@ -150,11 +152,11 @@ struct uct_tree
         node* curr = root.get();
 
         // find leaf, node selection
-        while (!curr->leaf()) {
+        while (!curr->leaf() && depth <= steps) {
 
-            //std::cout << "uct selection:";
-            //state_t tmp = curr->state();
-            //std::cout << '(' << tmp.first.first << ", " << tmp.first.second << ") " << tmp.second << '\n';
+            /*std::cout << "uct selection:";
+            state_t tmp = curr->state();
+            std::cout << '(' << tmp.first.first << ", " << tmp.first.second << ") " << tmp.second << '\n';*/
 
             // pick action according their uct values
             std::unordered_map<action_t, double> uct_act;
@@ -179,6 +181,8 @@ struct uct_tree
             state_t s_star;
             for (auto [s, w] : state_distr) {
 
+                //std::cout << "state select; num: " << num << " weight: " << w << " " << s_star.first.first << ", " << s_star.first.second << " " << s_star.second << '\n';
+
                 if (num <= w) {
                     s_star = s;
                     break;
@@ -189,7 +193,12 @@ struct uct_tree
 
             //std::cout << "s star selected \n";
 
+            /*std::cout << "action: " << a_star << " state: " << s_star.first.first << ", " << s_star.first.second << " " << s_star.second << '\n';
+            std::cout << "children " << curr->children.empty() << '\n';*/
+
             for (auto it = curr->children[a_star].begin(); it != curr->children[a_star].end(); ++it) {
+
+                //std::cout << "finding state: " << (*it)->state().first.first << ", " << (*it)->state().first.second << " " << (*it)->state().second << '\n';
 
                 if ((*it)->state() == s_star) {
                     curr = it->get();
@@ -205,10 +214,14 @@ struct uct_tree
         //std::cout << "node selection done\n";
 
         // expansion
-        if (depth < steps && !mdp->is_fail_state(curr->state())) {
+        if (depth < steps && !mdp->is_fail_state(curr->state()) && curr->gold_count > 0) {
 
             for (auto action : mdp->get_actions(curr->state())) {
+
+                int child_gold_count = curr->gold_count;
                 int rew = mdp->reward(curr->his, curr->state(), action);
+                if (rew == mdp->gold_reward())
+                    child_gold_count--;
                 double payoff = curr->payoff + std::pow(gamma, curr->his.actions.size()) * rew;
 
                 auto state_distr = mdp->state_action(curr->state(), action);
@@ -223,7 +236,7 @@ struct uct_tree
                             std::make_unique<node>(*this, std::move(new_h), curr, payoff, 1));
                     } else
                         curr->children[action].emplace_back(
-                            std::make_unique<node>(*this, std::move(new_h), curr, payoff));
+                            std::make_unique<node>(*this, std::move(new_h), curr, payoff, child_gold_count));
                 }
             }
         }
