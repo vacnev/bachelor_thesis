@@ -34,7 +34,7 @@ struct despot
     double gamma = 0.95;
 
     // maximum planning time per step
-    int T_max = 30;
+    int T_max = 3;
 
     std::mt19937 generator{std::random_device{}()};
 
@@ -109,6 +109,9 @@ struct despot
             
             L_value = L / scenarios.size();
             risk = r / scenarios.size();
+
+            // risk tainted by random playout forbids exploration
+            risk = 0;
         }
 
         // payoff, risk

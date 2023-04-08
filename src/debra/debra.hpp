@@ -34,6 +34,8 @@ struct debra
 
         for (size_t i = 0; i < depth; i++) {
 
+            std::cout << "STEP START delta: " << delta << '\n';
+
             auto tree = std::make_unique<despot<state_t, action_t>>(mdp, depth - i, h);
 
             //std::cout << "simul ended\n";

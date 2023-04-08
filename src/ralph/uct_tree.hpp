@@ -105,7 +105,7 @@ struct uct_tree
             v /= tree.default_playouts;
             r /= tree.default_playouts;
 
-            //r = 0;
+            r = 0;
         }
 
         // payoff, risk
