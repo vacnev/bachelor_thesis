@@ -13,7 +13,7 @@ struct despot
     MDP<state_t, action_t>* mdp;
 
     // target gap
-    double eta0 = 1;
+    double eta0 = 0.01;
 
     // target rate
     double eta_rate = 0.95;
@@ -25,7 +25,7 @@ struct despot
     size_t D;
 
     // regularization const
-    double lambda = 0.0;
+    double lambda = 0.01;
 
     // steps of default policy
     size_t D_default = 10;
@@ -34,7 +34,7 @@ struct despot
     double gamma = 0.95;
 
     // maximum planning time per step
-    int T_max = 1;
+    int T_max = 30;
 
     std::mt19937 generator{std::random_device{}()};
 
@@ -77,7 +77,7 @@ struct despot
         // fail state node
         node(despot& tree, history<state_t, action_t> h, node* parent, size_t depth, double payoff)
              : tree(tree), his(h), parent(parent), depth(depth), payoff(payoff),
-               risk(1), U_value(0), L_value(0), l_rwdu(0), u_rwdu(0) {}
+               risk(1), U_value(0), L_value(0), l_rwdu(0), u_rwdu(0), gold_count(0) {}
 
         state_t& state() {
             return his.last();
@@ -179,6 +179,9 @@ struct despot
 
         while (n->depth <= D && n->gold_count > 0 && excess_uncertainty(n) > 0 && !prune(n)) {
 
+            if (mdp->is_fail_state(n->state()))
+                std::cout << "trap state in explore\n";
+
             // leaf node - expansion
             if (n->leaf()) {
 
@@ -256,6 +259,9 @@ struct despot
     }
 
     double excess_uncertainty(node* n) {
+        if (mdp->is_fail_state(n->state()))
+            return 0;
+
         return n->eta() + (n->scenarios.size() / (double) K) * eta_rate * n0->eta();
     }
 

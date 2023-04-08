@@ -124,6 +124,8 @@ struct debra
             // step
             h.add(a_star, s_star);
 
+            std::cout << "real step: action: " << a_star << " state: (" << s_star.first.first << ", " << s_star.first.second << ") " << s_star.second << '\n';
+
             if (mdp->is_fail_state(s_star)) {
                 std::cout << "killed\n";
                 break;
@@ -152,7 +154,7 @@ struct debra
                 
 
             //std::cout << "root: (" << h.last().first.first << ", " << h.last().first.second << ") " << h.last().second << '\n';
-            std::cout << "real step: action: " << a_star << " state: (" << s_star.first.first << ", " << s_star.first.second << ") " << s_star.second << '\n';
+            //std::cout << "real step: action: " << a_star << " state: (" << s_star.first.first << ", " << s_star.first.second << ") " << s_star.second << '\n';
             std::cout << "cp: " << cum_payoff << '\n';
         }
 
