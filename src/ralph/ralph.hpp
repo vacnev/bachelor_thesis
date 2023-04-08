@@ -17,7 +17,7 @@ struct ralph
     size_t depth;
 
     // maximum planning time per step
-    double T_max = 3;
+    double T_max = 10;
 
     ralph(MDP<state_t, action_t>* mdp, size_t H, double risk)
          : mdp(mdp), risk_delta(risk), depth(H) {}
@@ -134,8 +134,14 @@ struct ralph
 
             state_t s_star = std::next(std::begin(state_dist), sample)->first;
 
+            if (mdp->is_fail_state(s_star)) {
+                std::cout << "killed\n";
+                break;
+            }
+
             // step
             auto& children = tree->root->children[a_star];
+            //std::cout << "next root: " << children.empty() << '\n';
             for (auto it = children.begin(); it != children.end(); ++it) {
 
                 if ((*it)->state() == s_star) {
@@ -236,7 +242,7 @@ struct ralph
             // objective
             double coef = (node->payoff / std::pow(tree->gamma, tree->root->his.actions.size()))  + std::pow(tree->gamma, node_depth) * node->v;
             objective->SetCoefficient(var, coef);
-            //std::cout << "leaf payoff: " << coef << " from first action: " << node->his.actions[0] << " with risk: " << node->r << '\n';
+            std::cout << node->state().first.first << ", " << node->state().first.second << " leaf payoff: " << coef << " from first action: " << node->his.actions[0] << " with risk: " << node->r << '\n';
 
             // risk
             risk_cons->SetCoefficient(var, node->r);

@@ -5,7 +5,7 @@ struct uct_tree
 {
     MDP<state_t, action_t>* mdp;
 
-    double c = 0.1; //exploration constant
+    double c = 0.2; //exploration constant
 
     std::mt19937 generator{std::random_device{}()};
 
@@ -40,25 +40,32 @@ struct uct_tree
 
         int gold_count; // remaining gold
 
+        bool is_leaf = true;
+
         std::unordered_map<action_t, std::vector<std::unique_ptr<node>>> children;
         // could be changed for pair action, state (better performance of simulate)
 
         node(uct_tree& t, history<state_t, action_t> h, node* p, double payoff, int g_c)
              : tree(t), his(h), payoff(payoff), parent(p), gold_count(g_c) {
-
-            default_policy(); // sets r, v
+            
+            if (gold_count > 0) {
+                default_policy(); // sets r, v
+            } else {
+                r = 0;
+                v = 0;
+            }
         }
 
         // fail state nodes
-        node(uct_tree& t, history<state_t, action_t> h, node* p, double payoff, double risk)
-         : tree(t), his(h), payoff(payoff), parent(p), r(risk), v(0), gold_count(0) {}
+        node(uct_tree& t, history<state_t, action_t> h, node* p, double payoff, bool fail)
+         : tree(t), his(h), payoff(payoff), parent(p), r(1), v(0), gold_count(0) {}
 
         state_t& state() {
             return his.last();
         }
 
         bool leaf() {
-            return children.empty();
+            return is_leaf;
         }
 
         double uct(action_t action) {
@@ -97,6 +104,8 @@ struct uct_tree
 
             v /= tree.default_playouts;
             r /= tree.default_playouts;
+
+            //r = 0;
         }
 
         // payoff, risk
@@ -152,7 +161,7 @@ struct uct_tree
         node* curr = root.get();
 
         // find leaf, node selection
-        while (!curr->leaf() && depth <= steps) {
+        while (!curr->leaf()) {
 
             /*std::cout << "uct selection:";
             state_t tmp = curr->state();
@@ -216,6 +225,8 @@ struct uct_tree
         // expansion
         if (depth < steps && !mdp->is_fail_state(curr->state()) && curr->gold_count > 0) {
 
+            curr->is_leaf = false;
+
             for (auto action : mdp->get_actions(curr->state())) {
 
                 int child_gold_count = curr->gold_count;
@@ -233,7 +244,7 @@ struct uct_tree
                     if (mdp->is_fail_state(state_prob.first)) {
                         //std::cout << "expand failt state\n";
                         curr->children[action].emplace_back(
-                            std::make_unique<node>(*this, std::move(new_h), curr, payoff, 1));
+                            std::make_unique<node>(*this, std::move(new_h), curr, payoff, true));
                     } else
                         curr->children[action].emplace_back(
                             std::make_unique<node>(*this, std::move(new_h), curr, payoff, child_gold_count));

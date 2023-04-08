@@ -122,6 +122,11 @@ struct debra
             // step
             h.add(a_star, s_star);
 
+            if (mdp->is_fail_state(s_star)) {
+                std::cout << "killed\n";
+                break;
+            }
+
             //std::cout << "altrisk cal\n";
 
             //altrisk
