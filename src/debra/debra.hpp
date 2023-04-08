@@ -73,10 +73,10 @@ struct debra
                 result_status = solver_risk->Solve();
                 assert(result_status == MPSolver::OPTIMAL);
 
-                delta = risk_obj->Value();
-                std::cout << "alter risk" << delta << '\n';
+                double altdelta = risk_obj->Value();
+                std::cout << "alter risk " << altdelta << '\n';
                 solver_policy->Clear();
-                policy = define_LP_policy(tree.get(), delta, solver_policy.get());
+                policy = define_LP_policy(tree.get(), altdelta, solver_policy.get());
                 result_status = solver_policy->Solve();
 
                 assert(result_status == MPSolver::OPTIMAL);
@@ -102,10 +102,12 @@ struct debra
             cum_payoff += mdp->reward(h, h.last(), a_star);
 
             // all gold taken
-            if (mdp->take_gold(h.last()))
+            if (mdp->take_gold(h.last())) {
+                std::cout << "all gold taken\n";
                 break;
+            }
 
-            std::cout << "sample state\n";
+            //std::cout << "sample state\n";
 
             // sample state
             auto state_dist = mdp->state_action(h.last(), a_star);
@@ -220,6 +222,7 @@ struct debra
 
             // risk
             risk_cons->SetCoefficient(var, node->risk);
+            //std::cout << "leaf risk: " << node->risk << " at " << node->state().first.first << ", " << node->state().first.second << " " << node->state().second << " depth: " << node->depth << '\n';
             return;
         }
 

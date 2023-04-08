@@ -12,7 +12,7 @@ struct uct_tree
     // depth of random playouts
     size_t steps_default = 10;
 
-    // number of ranfom playouts
+    // number of random playouts
     size_t default_playouts = 10;
 
     // discount factor

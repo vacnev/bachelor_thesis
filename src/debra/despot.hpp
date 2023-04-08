@@ -25,7 +25,7 @@ struct despot
     size_t D;
 
     // regularization const
-    double lambda = 0.01;
+    double lambda = 0.0;
 
     // steps of default policy
     size_t D_default = 10;
@@ -34,7 +34,7 @@ struct despot
     double gamma = 0.95;
 
     // maximum planning time per step
-    int T_max = 10;
+    int T_max = 1;
 
     std::mt19937 generator{std::random_device{}()};
 
@@ -53,11 +53,25 @@ struct despot
         double risk; // risk estimate
         node* parent;
         double payoff; // cumulative payoff
+        bool is_leaf = true;
+
+        int gold_count; // gold remaining
         
         node(despot& tree, history<state_t, action_t> h, std::vector<std::vector<double>>&& scenarios,
-             node* parent = nullptr, size_t depth = 0, double payoff = 0)
-             : tree(tree), his(h), scenarios(std::move(scenarios)), parent(parent), depth(depth), payoff(payoff) {
-            initialize_values();
+             node* parent, size_t depth, double payoff, int gold_count)
+             : tree(tree), his(h), scenarios(std::move(scenarios)),
+               parent(parent), depth(depth), payoff(payoff), gold_count(gold_count) {
+
+            if (gold_count > 0) {
+                initialize_values();
+            } else {
+                risk = 0;
+                U_value = 0;
+                L_value = 0;
+                l_rwdu = 0;
+                u_rwdu = 0;
+            }
+            
         }
 
         // fail state node
@@ -73,7 +87,7 @@ struct despot
         void initialize_values() {
             default_policy();
 
-            U_value = tree.mdp->max_payoff();
+            U_value = tree.mdp->gold_reward() * gold_count;
             l_rwdu = (scenarios.size() / (double) tree.K) * std::pow(tree.gamma, depth) * L_value;
             u_rwdu = (scenarios.size() / (double) tree.K) * std::pow(tree.gamma, depth) * U_value - tree.lambda;
 
@@ -133,7 +147,7 @@ struct despot
         }
 
         bool leaf() {
-            return children.empty();
+            return is_leaf;
         }
     };
 
@@ -143,7 +157,7 @@ struct despot
     despot(MDP<state_t, action_t>* mdp, size_t depth, history<state_t, action_t> h0) : mdp(mdp), D(depth) {
         
         std::vector<scenario> scenarios = sample_scenarios();
-        n0 = std::make_unique<node>(*this, h0, std::move(scenarios));
+        n0 = std::make_unique<node>(*this, h0, std::move(scenarios), nullptr, 0, 0, mdp->gold_rem());
         build_despot();
     }
 
@@ -163,10 +177,12 @@ struct despot
 
     node* explore(node* n) {
 
-        while (n->depth <= D && excess_uncertainty(n) > 0 && !prune(n)) {
+        while (n->depth <= D && n->gold_count > 0 && excess_uncertainty(n) > 0 && !prune(n)) {
 
             // leaf node - expansion
             if (n->leaf()) {
+
+                n->is_leaf = false;
                 
                 std::vector<action_t> actions = mdp->get_actions(n->state());
 
@@ -177,7 +193,12 @@ struct despot
 
                     action_t action = actions[i];
                     auto states_distr = mdp->state_action(n->state(), action);
-                    double payoff = n->payoff + std::pow(gamma, n->depth) * mdp->reward(n->his, n->state(), action);
+                    int rew = mdp->reward(n->his, n->state(), action);
+                    double payoff = n->payoff + std::pow(gamma, n->depth) * rew;
+
+                    int child_gold_count = n->gold_count;
+                    if (rew == mdp->gold_reward())
+                        child_gold_count--;
 
                     for (size_t j = 0; j < n->scenarios.size(); j++) {
                         double s = n->scenarios[j][n->depth];
@@ -197,7 +218,7 @@ struct despot
                         if (mdp->is_fail_state(it->first)) {
                             new_node = std::make_unique<node>(*this, new_h, n, n->depth + 1, payoff);
                         } else {
-                            new_node = std::make_unique<node>(*this, new_h, std::move(it->second), n, n->depth + 1, payoff);
+                            new_node = std::make_unique<node>(*this, new_h, std::move(it->second), n, n->depth + 1, payoff, child_gold_count);
                         }
 
                         n->children[action].push_back(std::move(new_node));
