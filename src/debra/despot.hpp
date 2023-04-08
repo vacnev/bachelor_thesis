@@ -31,10 +31,10 @@ struct despot
     size_t D_default = 10;
 
     // discount parameter
-    double gamma = 0.95;
+    double gamma = 1;
 
     // maximum planning time per step
-    int T_max = 3;
+    int T_max = 15;
 
     std::mt19937 generator{std::random_device{}()};
 
@@ -180,7 +180,7 @@ struct despot
 
     node* explore(node* n) {
 
-        while (n->depth <= D && n->gold_count > 0 && excess_uncertainty(n) > 0 && !prune(n)) {
+        while (n->depth <= D && n->gold_count > 0 && excess_uncertainty(n) > 0/* && !prune(n)*/) {
 
             if (mdp->is_fail_state(n->state()))
                 std::cout << "trap state in explore\n";
