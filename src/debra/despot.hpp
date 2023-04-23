@@ -180,7 +180,7 @@ struct despot
 
     node* explore(node* n) {
 
-        while (n->depth <= D && n->gold_count > 0 && excess_uncertainty(n) > 0/* && !prune(n)*/) {
+        while (n->depth <= D && n->gold_count > 0 && excess_uncertainty(n) > 0 && !prune(n)) {
 
             if (mdp->is_fail_state(n->state()))
                 std::cout << "trap state in explore\n";
@@ -252,11 +252,10 @@ struct despot
 
             n = std::max_element(n->children[a_star].begin(), n->children[a_star].end(),
                 [this](auto& a, auto&b) {return excess_uncertainty(a.get()) < excess_uncertainty(b.get());})->get();
-
-            
-            if (n->depth > D)
-                n->make_default();
         }
+
+        if (n->depth > D)
+            n->make_default();
 
         return n;
     }
