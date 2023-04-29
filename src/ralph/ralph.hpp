@@ -17,7 +17,7 @@ struct ralph
     size_t depth;
 
     // maximum planning time per step
-    double T_max = 10;
+    double T_max = 1;
 
     ralph(MDP<state_t, action_t>* mdp, size_t H, double risk)
          : mdp(mdp), risk_delta(risk), depth(H) {}
@@ -109,7 +109,7 @@ struct ralph
             std::vector<double> policy_distr;
             for (auto it = policy.begin(); it != policy.end(); it++) {
                 policy_distr.emplace_back(it->second->solution_value());
-                std::cout << "action: " << it->first << " prob: " << it->second->solution_value() << '\n';
+                //std::cout << "action: " << it->first << " prob: " << it->second->solution_value() << '\n';
             }
            
             std::discrete_distribution<> ad(policy_distr.begin(), policy_distr.end());
@@ -177,9 +177,9 @@ struct ralph
             std::cout << "cp: " << cum_payoff << '\n';
         }
 
-        std::cout << "file write\n";
+        //std::cout << "file write\n";
         std::ofstream file("ralph_result.txt", std::ios::out | std::ios::app);
-        file << cum_payoff << ";" << mdp->is_fail_state(h.last()) << "\n";
+        file << cum_payoff << ";" << mdp->is_fail_state(tree->root->state()) << ';' << tree->node_expanded << "\n";
         //mdp->write_history(file, tree->root->his);
         file.close();
     }
@@ -199,7 +199,7 @@ struct ralph
 
         MPConstraint* const risk_cons = solver_policy->MakeRowConstraint(0.0, risk); // risk
 
-        std::cout << "risk: " << risk << '\n';
+        //std::cout << "risk: " << risk << '\n';
 
         MPVariable* const r = solver_policy->MakeIntVar(1, 1, "r"); // (1)
 
@@ -244,7 +244,7 @@ struct ralph
             // objective
             double coef = (node->payoff / std::pow(tree->gamma, tree->root->his.actions.size()))  + std::pow(tree->gamma, node_depth) * node->v;
             objective->SetCoefficient(var, coef);
-            std::cout << node->state().first.first << ", " << node->state().first.second << " leaf payoff: " << coef << " from first action: " << node->his.actions[0] << " with risk: " << node->r << '\n';
+            //std::cout << node->state().first.first << ", " << node->state().first.second << " leaf payoff: " << coef << " from first action: " << node->his.actions[0] << " with risk: " << node->r << '\n';
 
             // risk
             risk_cons->SetCoefficient(var, node->r);

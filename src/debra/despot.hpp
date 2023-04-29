@@ -36,6 +36,9 @@ struct despot
     // maximum planning time per step
     int T_max = 1;
 
+    // measure of expanded nodes
+    size_t node_expanded = 0;
+
     std::mt19937 generator{std::random_device{}()};
 
     struct node
@@ -187,6 +190,8 @@ struct despot
 
             // leaf node - expansion
             if (n->leaf()) {
+
+                node_expanded++;
 
                 n->is_leaf = false;
                 

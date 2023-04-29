@@ -18,6 +18,9 @@ struct uct_tree
     // discount factor
     double gamma = 0.95;
 
+    // measurement of node expansion
+    size_t node_expanded = 0;
+
     struct node
     {
         uct_tree& tree;
@@ -224,6 +227,8 @@ struct uct_tree
 
         // expansion
         if (depth < steps && !mdp->is_fail_state(curr->state()) && curr->gold_count > 0) {
+
+            node_expanded++;
 
             curr->is_leaf = false;
 

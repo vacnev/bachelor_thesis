@@ -34,9 +34,11 @@ struct debra
 
         double delta = risk_delta;
 
+        size_t expanded_nodes = 0;
+
         for (size_t i = 0; i < depth; i++) {
 
-            std::cout << "STEP START delta: " << delta << '\n';
+            //std::cout << "STEP START delta: " << delta << '\n';
 
             auto tree = std::make_unique<despot<state_t, action_t>>(mdp, depth - i, h);
 
@@ -95,7 +97,7 @@ struct debra
             std::vector<double> policy_distr;
             for (auto it = policy.begin(); it != policy.end(); it++) {
                 policy_distr.emplace_back(it->second->solution_value());
-                std::cout << "action: " << it->first << " prob: " << it->second->solution_value() << '\n';
+                //std::cout << "action: " << it->first << " prob: " << it->second->solution_value() << '\n';
             }
            
             std::discrete_distribution<> ad(policy_distr.begin(), policy_distr.end());
@@ -160,10 +162,12 @@ struct debra
             //std::cout << "root: (" << h.last().first.first << ", " << h.last().first.second << ") " << h.last().second << '\n';
             //std::cout << "real step: action: " << a_star << " state: (" << s_star.first.first << ", " << s_star.first.second << ") " << s_star.second << '\n';
             std::cout << "cp: " << cum_payoff << '\n';
+
+            expanded_nodes += tree->node_expanded;
         }
 
         std::ofstream file("debra_result.txt", std::ios::out | std::ios::app);
-        file << cum_payoff << ";" << mdp->is_fail_state(h.last()) << "\n";
+        file << cum_payoff << ";" << mdp->is_fail_state(h.last()) << ';' << expanded_nodes << "\n";
         //mdp->write_history(file, h);
         file.close();
     }
