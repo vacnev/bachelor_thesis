@@ -22,6 +22,8 @@ struct debra
     // sample episode, write (to file) trajectory (policy observation), cummulative reward
     void episode() {
 
+        mdp->init_plan();
+
         // Create the linear solvers with the GLOP backend.
         std::unique_ptr<MPSolver> solver_policy(MPSolver::CreateSolver("GLOP"));
         std::unique_ptr<MPSolver> solver_risk(MPSolver::CreateSolver("GLOP"));
@@ -161,8 +163,8 @@ struct debra
         }
 
         std::ofstream file("debra_result.txt", std::ios::out | std::ios::app);
-        file << cum_payoff << " KILLED: " << mdp->is_fail_state(h.last()) << " ";
-        mdp->write_history(file, h);
+        file << cum_payoff << ";" << mdp->is_fail_state(h.last()) << "\n";
+        //mdp->write_history(file, h);
         file.close();
     }
 

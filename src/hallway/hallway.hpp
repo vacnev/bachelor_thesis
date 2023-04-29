@@ -32,8 +32,20 @@ struct hallway : public MDP<state_t, action_t>
 
     std::vector<std::string> plan;
 
+    // original gold count
+    int init_gold_count;
+
+    std::string filename;
+
     hallway(std::string filename, double s, double t, int g_c)
-           : shift_p(s), trap_p(t), gold_count(g_c) {
+           : shift_p(s), trap_p(t), init_gold_count(g_c), filename(filename) {
+        init_plan();
+    }
+
+    void init_plan() override {
+        plan.clear();
+        gold_count = init_gold_count;
+
         std::string line;
         std::ifstream file(filename, std::ios::in);
 

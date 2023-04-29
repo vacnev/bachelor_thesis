@@ -25,6 +25,8 @@ struct ralph
     // sample episode, write (to file) trajectory (policy observation), cummulative reward
     void episode() {
 
+        mdp->init_plan();
+
         // Create the linear solvers with the GLOP backend.
         std::unique_ptr<MPSolver> solver_policy(MPSolver::CreateSolver("GLOP"));
         std::unique_ptr<MPSolver> solver_risk(MPSolver::CreateSolver("GLOP"));
@@ -177,8 +179,8 @@ struct ralph
 
         std::cout << "file write\n";
         std::ofstream file("ralph_result.txt", std::ios::out | std::ios::app);
-        file << cum_payoff << " KILLED: " << mdp->is_fail_state(tree->root->state()) << " ";
-        mdp->write_history(file, tree->root->his);
+        file << cum_payoff << ";" << mdp->is_fail_state(h.last()) << "\n";
+        //mdp->write_history(file, tree->root->his);
         file.close();
     }
 

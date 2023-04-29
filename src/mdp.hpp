@@ -38,6 +38,9 @@ struct MDP
     // write history for evaluation
     virtual void write_history(std::ofstream&, history<state_t, action_t>&) = 0;
 
+    // init plan for next episode
+    virtual void init_plan() = 0;
+
     virtual ~MDP() = default;
 };
 

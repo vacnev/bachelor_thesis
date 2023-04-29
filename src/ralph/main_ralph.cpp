@@ -3,9 +3,21 @@
 
 int main()
 {
-    std::unique_ptr<MDP<state_t, action_t>> mdp = std::make_unique<hallway>("../../hallway/hallway1.txt", 0, 0.2, 1);
-    ralph<state_t, action_t> r(mdp.get(), 20, 0);
-    r.episode();
+    // filename, shift prob, trap prob, gold count
+    auto filename = "../../hallway/hallway1.txt";
+    double p_s = 0;
+    double p_t = 0.2;
+    int gold_count = 1;
+    std::unique_ptr<MDP<state_t, action_t>> mdp = std::make_unique<hallway>(filename, p_s, p_t, gold_count);
+
+    // max depth, allowed risk
+    size_t max_depth = 60;
+    double delta_threshold = 0;
+    ralph<state_t, action_t> r(mdp.get(), max_depth, delta_threshold);
+
+    for (size_t i = 0; i < 100; i++) {
+        r.episode();
+    }
 
     return 0;
 }
