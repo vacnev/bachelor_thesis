@@ -25,7 +25,7 @@ struct despot
     size_t D;
 
     // regularization const
-    double lambda = 1;
+    double lambda = 0.01;
 
     // steps of default policy
     size_t D_default = 10;
@@ -34,7 +34,7 @@ struct despot
     double gamma = 0.95;
 
     // maximum planning time per step
-    int T_max = 1;
+    int T_max = 2;
 
     // measure of expanded nodes
     size_t node_expanded = 0;

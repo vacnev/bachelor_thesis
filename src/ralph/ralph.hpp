@@ -17,7 +17,7 @@ struct ralph
     size_t depth;
 
     // maximum planning time per step
-    double T_max = 1;
+    double T_max = 2;
 
     ralph(MDP<state_t, action_t>* mdp, size_t H, double risk)
          : mdp(mdp), risk_delta(risk), depth(H) {}
@@ -136,11 +136,6 @@ struct ralph
 
             state_t s_star = std::next(std::begin(state_dist), sample)->first;
 
-            if (mdp->is_fail_state(s_star)) {
-                std::cout << "killed\n";
-                break;
-            }
-
             // step
             auto& children = tree->root->children[a_star];
             //std::cout << "next root: " << children.empty() << '\n';
@@ -150,6 +145,11 @@ struct ralph
                     tree->root = std::move(*it);
                     break;
                 }
+            }
+
+            if (mdp->is_fail_state(s_star)) {
+                std::cout << "killed\n";
+                break;
             }
 
             //altrisk

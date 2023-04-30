@@ -4,10 +4,10 @@
 int main()
 {
     // filename, shift prob, trap prob, gold count
-    auto filename = "../../hallway/hallway1.txt";
-    double p_s = 0;
-    double p_t = 0.2;
-    int gold_count = 1;
+    auto filename = "../../hallway/hallway2.txt";
+    double p_s = 0.1;
+    double p_t = 1;
+    int gold_count = 3;
     std::unique_ptr<MDP<state_t, action_t>> mdp = std::make_unique<hallway>(filename, p_s, p_t, gold_count);
 
     // max depth, allowed risk
