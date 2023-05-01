@@ -16,7 +16,7 @@ struct uct_tree
     size_t default_playouts = 10;
 
     // discount factor
-    double gamma = 0.95;
+    double gamma = 1;
 
     // measurement of node expansion
     size_t node_expanded = 0;

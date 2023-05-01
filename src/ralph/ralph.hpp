@@ -17,7 +17,7 @@ struct ralph
     size_t depth;
 
     // maximum planning time per step
-    double T_max = 2;
+    double T_max = 3;
 
     ralph(MDP<state_t, action_t>* mdp, size_t H, double risk)
          : mdp(mdp), risk_delta(risk), depth(H) {}
