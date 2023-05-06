@@ -89,7 +89,7 @@ struct ralph
 
             //std::cout << "policy solved\n";
 
-            if (result_status == MPSolver::INFEASIBLE) {
+            if (result_status != MPSolver::OPTIMAL) {
 
                 // if risk_delta is infeasable we relax the bound
                 std::cout << "alter risk\n";

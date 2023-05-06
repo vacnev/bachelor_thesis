@@ -15,7 +15,7 @@ int main()
     double delta_threshold = 0;
     debra<state_t, action_t> d(mdp.get(), max_depth, delta_threshold);
 
-    for (size_t i = 0; i < 4; i++) {
+    for (size_t i = 0; i < 2; i++) {
         d.episode();
     }
     

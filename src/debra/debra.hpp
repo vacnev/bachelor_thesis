@@ -72,7 +72,7 @@ struct debra
             std::unordered_map<action_t, MPVariable* const> policy = define_LP_policy(tree.get(), delta, solver_policy.get());
             MPSolver::ResultStatus result_status = solver_policy->Solve();
 
-            if (result_status == MPSolver::INFEASIBLE) {
+            if (result_status != MPSolver::OPTIMAL) {
 
                 // if risk_delta is infeasable we relax the bound
                 auto risk_obj = define_LP_risk(tree->n0.get(), solver_risk.get());

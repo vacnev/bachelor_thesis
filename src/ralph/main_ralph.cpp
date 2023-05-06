@@ -15,7 +15,7 @@ int main()
     double delta_threshold = 0;
     ralph<state_t, action_t> r(mdp.get(), max_depth, delta_threshold);
 
-    for (size_t i = 0; i < 5; i++) {
+    for (size_t i = 0; i < 10; i++) {
         r.episode();
     }
 
