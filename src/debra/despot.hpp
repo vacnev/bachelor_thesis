@@ -13,7 +13,7 @@ struct despot
     MDP<state_t, action_t>* mdp;
 
     // target gap
-    double eta0 = 0.01;
+    double eta0 = 1;
 
     // target rate
     double eta_rate = 0.95;
@@ -31,7 +31,7 @@ struct despot
     size_t D_default = 10;
 
     // discount parameter
-    double gamma = 1;
+    double gamma = 0.95;
 
     // maximum planning time per step
     int T_max = 3;
