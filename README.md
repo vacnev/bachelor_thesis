@@ -9,8 +9,10 @@ Setting the MDP used and its parameters is done in the main_X.cpp file. Settings
 Compilation:
 Download and unpack the OR-tools library from https://developers.google.com/optimization/install/cpp/binary_linux.
 To compile the algorithm enter its folder, e.g., src/debra, and run the commands from src/cmake.txt:
+
 1) cmake -S . -B build -DCMAKE_PREFIX_PATH="../../../or-tools_amd64_ubuntu-22.04_cpp_v9.6.2534/or-tools_x86_64_Ubuntu-22.04_cpp_v9.6.2534" , to DCMAKE_PREFIX_PATH enter your relative path to the unpacked OR-tools library
 2) cmake --build build -v
+
 Then enter the build folder (cd build) and run make (the folder and corresponding makefile were created by cmake).
 The compiled binary will be available in the bin folder.
 
