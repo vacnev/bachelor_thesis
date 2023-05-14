@@ -1,15 +1,10 @@
 #include "../mdp.hpp"
 
-// if fail state kills us with prob 1, then there is no point in exploring such states
-// if not, despot can be modified to continue exploration (default_policy, explore)
-
 using scenario = std::vector<double>;
 
 template< typename state_t, typename action_t >
 struct despot
 {
-    // TODO: set intial params
-
     MDP<state_t, action_t>* mdp;
 
     // target gap
@@ -351,13 +346,11 @@ struct despot
     std::vector<std::vector<double>> sample_scenarios() {
         std::vector<scenario> scenarios;
         std::uniform_real_distribution d;
-        //std::srand( (unsigned) time(NULL) );
 
         for(size_t i = 0; i < K; i++) {
             scenario scenar;
 
             for (size_t j = 0; j < D + D_default; j++) {
-                //scenar.emplace_back((double) std::rand() / RAND_MAX);
                 scenar.emplace_back(d(generator));
             }
             

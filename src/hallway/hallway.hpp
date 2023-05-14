@@ -117,10 +117,6 @@ struct hallway : public MDP<state_t, action_t>
 
         std::map<state_t, double> s_a;
 
-        /*std::cout << "state_action:";
-        std::cout << '(' << s.first.first << ", " << s.first.second << ") " << s.second;
-        std::cout << " - " << a << "\n";*/
-
         switch (a) {
 
             case TURN_LEFT:
@@ -191,7 +187,6 @@ struct hallway : public MDP<state_t, action_t>
                 prob -= shift_p;
 
                 if (is_trap(coord_shift)) {
-                    //std::cout << "TRAP\n";
                     s_a[f_state] += shift_p * trap_p;
                     s_a.insert({std::make_pair(coord_shift, s.second), shift_p * (1 - trap_p)});
                 } else {
@@ -205,7 +200,6 @@ struct hallway : public MDP<state_t, action_t>
                 prob -= shift_p;
 
                 if (is_trap(coord_shift)) {
-                    //std::cout << "TRAP\n";
                     s_a[f_state] += shift_p * trap_p;
                     s_a.insert({std::make_pair(coord_shift, s.second), shift_p * (1 - trap_p)});
                 } else {
@@ -215,7 +209,6 @@ struct hallway : public MDP<state_t, action_t>
 
             //forward
             if (is_trap(coord)) {
-                //std::cout << "TRAP\n";
                 s_a[f_state] += prob * trap_p;
                 s_a.insert({std::make_pair(coord, s.second), prob * (1 - trap_p)});
             } else {
@@ -229,12 +222,10 @@ struct hallway : public MDP<state_t, action_t>
     }
 
     bool is_wall(std::pair<int, int>& coord) {
-        //std::cout << "isWALL: " << coord.first << " " << coord.second << '\n';
         return plan[coord.first][coord.second] == '#';
     }
 
     bool is_trap(std::pair<int, int>& coord) {
-        //std::cout << "isTRAP: " << coord.first << " " << coord.second << '\n';
         return plan[coord.first][coord.second] == 'x';
     }
 

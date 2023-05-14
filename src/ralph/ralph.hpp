@@ -48,19 +48,9 @@ struct ralph
                 tree->simulate(depth - i);
             }
 
-            //std::cout << "end simulation\n";
-
-            //std::unique_ptr<MPSolver> solver_policy(MPSolver::CreateSolver("GLOP"));
-            //std::unique_ptr<MPSolver> solver_risk(MPSolver::CreateSolver("GLOP"));
-
             solver_policy->Clear();
             solver_risk->Clear();
 
-            // rick contrib estimates and minimal possible risk (objective)
-            //auto [tau, risk_accept] = define_LP_risk(tree.get(), solver_risk.get());
-            //MPSolver::ResultStatus result_status = solver_risk->Solve();
-
-            //tau - risk contrib estimates and minimal possible risk (objective)
             std::map<std::pair<action_t, state_t>, double> tau;
 
             for (auto& [ac, vec] : tree->root->children) {
@@ -81,13 +71,9 @@ struct ralph
                 }
             }
 
-            //std::cout << "risk_solved\n" ; 
-            
             // policy
             std::unordered_map<action_t, MPVariable* const> policy = define_LP_policy(tree.get(), delta, solver_policy.get());
             MPSolver::ResultStatus result_status = solver_policy->Solve();
-
-            //std::cout << "policy solved\n";
 
             if (result_status != MPSolver::OPTIMAL) {
 
@@ -138,7 +124,6 @@ struct ralph
 
             // step
             auto& children = tree->root->children[a_star];
-            //std::cout << "next root: " << children.empty() << '\n';
             for (auto it = children.begin(); it != children.end(); ++it) {
 
                 if ((*it)->state() == s_star) {
@@ -173,11 +158,11 @@ struct ralph
                 
 
             //std::cout << "root: (" << tree->root->state().first.first << ", " << tree->root->state().first.second << ") " << tree->root->state().second << '\n';
-            std::cout << "real step: action: " << a_star << " state: (" << s_star.first.first << ", " << s_star.first.second << ") " << s_star.second << '\n';
-            std::cout << "cp: " << cum_payoff << '\n';
+            //std::cout << "real step: action: " << a_star << " state: (" << s_star.first.first << ", " << s_star.first.second << ") " << s_star.second << '\n';
+            //std::cout << "cp: " << cum_payoff << '\n';
         }
 
-        //std::cout << "file write\n";
+        // write result in a file
         std::ofstream file("ralph_result.txt", std::ios::out | std::ios::app);
         file << cum_payoff << ";" << mdp->is_fail_state(tree->root->state()) << ';' << tree->node_expanded << "\n";
         //mdp->write_history(file, tree->root->his);
@@ -244,7 +229,6 @@ struct ralph
             // objective
             double coef = (node->payoff / std::pow(tree->gamma, tree->root->his.actions.size()))  + std::pow(tree->gamma, node_depth) * node->v;
             objective->SetCoefficient(var, coef);
-            //std::cout << node->state().first.first << ", " << node->state().first.second << " leaf payoff: " << coef << " from first action: " << node->his.actions[0] << " with risk: " << node->r << '\n';
 
             // risk
             risk_cons->SetCoefficient(var, node->r);
@@ -279,8 +263,6 @@ struct ralph
 
     auto define_LP_risk(typename uct_tree<state_t, action_t>::node* root, MPSolver* solver_risk) {
 
-        //std::map<std::pair<action_t, state_t>, MPVariable* const> tau; // risk contribution estimates
-
         assert(!root.leaf());
 
         size_t ctr = 0; //counter
@@ -310,10 +292,6 @@ struct ralph
                 double delta = states_distr[(*it)->state()];
                 ac_st->SetCoefficient(ac, delta);
 
-                // tau[std::make_pair(*ac_it, (*it)->state())] = st;
-                //state_t s = (*it)->state();
-                //tau.insert({std::make_pair(*ac_it, (*it)->state()), st});
-
                 LP_risk_rec(it->get(), st, ctr, objective, solver_risk);
             }
         }
@@ -331,8 +309,6 @@ struct ralph
 
             // objective
             objective->SetCoefficient(var, node->r);
-
-            //std::cout << "leaf risk: " << node->r << '\n';
 
             return;
         }                   

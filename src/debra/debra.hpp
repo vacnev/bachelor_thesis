@@ -38,11 +38,7 @@ struct debra
 
         for (size_t i = 0; i < depth; i++) {
 
-            //std::cout << "STEP START delta: " << delta << '\n';
-
             auto tree = std::make_unique<despot<state_t, action_t>>(mdp, depth - i, h);
-
-            //std::cout << "simul ended\n";
 
             solver_policy->Clear();
             solver_risk->Clear();
@@ -86,12 +82,7 @@ struct debra
                 result_status = solver_policy->Solve();
 
                 assert(result_status == MPSolver::OPTIMAL);
-
-                //if (result_status == MPSolver::INFEASIBLE)
-                 //   std::cout << "altrisk infeasable\n";
             }
-
-            //std::cout << "sample action\n";
 
             // sample action
             std::vector<double> policy_distr;
@@ -113,8 +104,6 @@ struct debra
                 break;
             }
 
-            //std::cout << "sample state\n";
-
             // sample state
             auto state_dist = mdp->state_action(h.last(), a_star);
             std::vector<double> weights;
@@ -130,14 +119,12 @@ struct debra
             // step
             h.add(a_star, s_star);
 
-            std::cout << "real step: action: " << a_star << " state: (" << s_star.first.first << ", " << s_star.first.second << ") " << s_star.second << '\n';
+            //std::cout << "real step: action: " << a_star << " state: (" << s_star.first.first << ", " << s_star.first.second << ") " << s_star.second << '\n';
 
             if (mdp->is_fail_state(s_star)) {
                 std::cout << "killed\n";
                 break;
             }
-
-            //std::cout << "altrisk cal\n";
 
             //altrisk
             double altrisk = 0;
@@ -161,11 +148,12 @@ struct debra
 
             //std::cout << "root: (" << h.last().first.first << ", " << h.last().first.second << ") " << h.last().second << '\n';
             //std::cout << "real step: action: " << a_star << " state: (" << s_star.first.first << ", " << s_star.first.second << ") " << s_star.second << '\n';
-            std::cout << "cp: " << cum_payoff << '\n';
+            //std::cout << "cp: " << cum_payoff << '\n';
 
             expanded_nodes += tree->node_expanded;
         }
 
+        // write result into a file
         std::ofstream file("debra_result.txt", std::ios::out | std::ios::app);
         file << cum_payoff << ";" << mdp->is_fail_state(h.last()) << ';' << expanded_nodes << "\n";
         //mdp->write_history(file, h);
@@ -232,7 +220,6 @@ struct debra
 
             // risk
             risk_cons->SetCoefficient(var, node->risk);
-            //std::cout << "leaf risk: " << node->risk << " at " << node->state().first.first << ", " << node->state().first.second << " " << node->state().second << " depth: " << node->depth << '\n';
             return;
         }
 
@@ -263,8 +250,6 @@ struct debra
     }
 
     auto define_LP_risk(typename despot<state_t, action_t>::node* root, MPSolver* solver_risk) {
-
-        //std::map<std::pair<action_t, state_t>, MPVariable* const> tau; // risk contribution estimates
 
         assert(!root->leaf());
 

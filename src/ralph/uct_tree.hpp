@@ -73,11 +73,6 @@ struct uct_tree
 
         double uct(action_t action) {
 
-            /*std::cout << "print action payoff\n";
-            for (auto [a, d] : action_payoff) {
-                std::cout << "action: " << a << " payoff: " << d << '\n';
-            }*/
-
             double Vmax = 0, Vmin = 0;
             if (!action_payoff.empty()) {
                 Vmax = std::max_element(action_payoff.begin(), action_payoff.end(),
@@ -86,8 +81,6 @@ struct uct_tree
                             [](auto& l, auto& r){ return l.second < r.second; })->second;
             }
 
-            //std::cout << "uct after maxm in\n";
-            
             return ((action_payoff[action] - Vmin) / (Vmax - Vmin)) +
                      tree.c * std::sqrt(std::log(N) / (action_visits[action] + 1));
         }
@@ -166,24 +159,15 @@ struct uct_tree
         // find leaf, node selection
         while (!curr->leaf()) {
 
-            /*std::cout << "uct selection:";
-            state_t tmp = curr->state();
-            std::cout << '(' << tmp.first.first << ", " << tmp.first.second << ") " << tmp.second << '\n';*/
-
             // pick action according their uct values
             std::unordered_map<action_t, double> uct_act;
             
             for (auto it = curr->children.begin(); it != curr->children.end(); ++it) {
-                //std::cout << "uct action: " << curr->uct(it->first) << '\n';
                 uct_act[it->first] = curr->uct(it->first);
             }
 
-            //std::cout << "after uct\n";
-
             action_t a_star = std::max_element(uct_act.begin(), uct_act.end(),
                               [](auto& l, auto& r) { return l.second < r.second; })->first;
-
-            //std::cout << "a star selected\n";
 
             // sample state   // duplicate
             auto state_distr = mdp->state_action(curr->state(), a_star);
@@ -193,8 +177,6 @@ struct uct_tree
             state_t s_star;
             for (auto [s, w] : state_distr) {
 
-                //std::cout << "state select; num: " << num << " weight: " << w << " " << s_star.first.first << ", " << s_star.first.second << " " << s_star.second << '\n';
-
                 if (num <= w) {
                     s_star = s;
                     break;
@@ -203,14 +185,7 @@ struct uct_tree
                 num -= w;
             }
 
-            //std::cout << "s star selected \n";
-
-            /*std::cout << "action: " << a_star << " state: " << s_star.first.first << ", " << s_star.first.second << " " << s_star.second << '\n';
-            std::cout << "children " << curr->children.empty() << '\n';*/
-
             for (auto it = curr->children[a_star].begin(); it != curr->children[a_star].end(); ++it) {
-
-                //std::cout << "finding state: " << (*it)->state().first.first << ", " << (*it)->state().first.second << " " << (*it)->state().second << '\n';
 
                 if ((*it)->state() == s_star) {
                     curr = it->get();
@@ -219,11 +194,7 @@ struct uct_tree
             }
 
             ++depth;
-
-            //std::cout << "node selection step\n";
         }
-
-        //std::cout << "node selection done\n";
 
         // expansion
         if (depth < steps && !mdp->is_fail_state(curr->state()) && curr->gold_count > 0) {
@@ -247,7 +218,6 @@ struct uct_tree
                     new_h.add(action, state_prob.first);
 
                     if (mdp->is_fail_state(state_prob.first)) {
-                        //std::cout << "expand failt state\n";
                         curr->children[action].emplace_back(
                             std::make_unique<node>(*this, std::move(new_h), curr, payoff, true));
                     } else
@@ -257,8 +227,6 @@ struct uct_tree
             }
         }
 
-        //std::cout << "after expansion\n";
-
         // backpropagation
         double val = curr->v;
         curr->N++;
@@ -266,23 +234,15 @@ struct uct_tree
 
         while (curr != root.get()) {
 
-            //std::cout << "curr state: (" << curr->state().first.first << ", " << curr->state().first.second << ") " << curr->state().second << '\n';
-
             action_t& action = curr->his.last_action();
-            //std::cout << "flag1\n";
             parent->N++;
-            //std::cout << "flag2\n";
             parent->action_visits[action] += 1;
-            //std::cout << parent->action_visits[action] << "flag3\n";
             val = mdp->reward(parent->his, parent->state(), action) + gamma * val;
-            //std::cout << "flag4\n";
             parent->action_payoff[action] += (val - parent->action_payoff[action]) / parent->action_visits[action];
-            //std::cout << parent->action_payoff[action] << "flag5\n";
 
             curr = parent;
             parent = curr->parent;
         }
 
-        //std::cout << "simulate step\n";
     }
 };
