@@ -4,7 +4,7 @@ Structure:
 - src/hallway contains Hallway Game scenarios used in experiments together with the Hallway Game source code in hallway.hpp following the interface from mdp.hpp
 
 The source code of the algorithms is provided in src/debra and src/ralph, they both accept MDPs following the interface.
-Setting the MDP used and its parameters is done in the main_X.cpp file. Settings the algorithms' hyperparametres is possible in the correspoding .hpp source files.
+Setting the MDP used and its parameters is done in the main_X.cpp file. Settings the algorithms' hyperparametres is possible in the correspoding .hpp source files. Hallway Game's rewards can be modified in hallway.hpp.
 
 Compilation:
 
