@@ -10,7 +10,7 @@ The code contains commented outputs that help to monitor the movements of the ag
 Compilation:
 
 Download and unpack the OR-tools library from https://developers.google.com/optimization/install/cpp/binary_linux.
-To compile the algorithm enter its folder, e.g., src/debra, and run the commands from src/cmake.txt:
+To compile the algorithm enter its folder, src/debra of src/ralph, and run the commands from src/cmake.txt:
 
 1) cmake -S . -B build -DCMAKE_PREFIX_PATH="../../../or-tools_amd64_ubuntu-22.04_cpp_v9.6.2534/or-tools_x86_64_Ubuntu-22.04_cpp_v9.6.2534" , to DCMAKE_PREFIX_PATH enter your relative path to the unpacked OR-tools library
 2) cmake --build build -v
