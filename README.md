@@ -5,6 +5,7 @@ Structure:
 
 The source code of the algorithms is provided in src/debra and src/ralph, they both accept MDPs following the interface.
 Setting the MDP used and its parameters is done in the main_X.cpp file. Settings the algorithms' hyperparametres is possible in the correspoding .hpp source files. Hallway Game's rewards can be modified in hallway.hpp.
+The code contains commented outputs that help to monitor the movements of the agent during planning.
 
 Compilation:
 
