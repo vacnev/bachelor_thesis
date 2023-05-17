@@ -16,5 +16,5 @@ To compile the algorithm, enter its folder, **src/debra** or **src/ralph**, and 
 2) cmake --build build -v
 
 Then enter the build folder (cd build) and run make (the folder and corresponding makefile were created by cmake).
-The compiled binary will be available in the bin folder.
+The compiled binary will be available in the bin folder. Run it from the build folder (./bin/main_X).
 
